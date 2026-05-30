@@ -40,6 +40,11 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
     }
   };
 
+  // 칩 개별 삭제 — 인덱스 기반 제거 (같은 이름이 여러 개여도 클릭한 칩만)
+  const handleRemoveTag = (index: number) => {
+    setTags((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       alert('제목을 입력해주세요');
@@ -110,9 +115,17 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
             {tags.map((tag, i) => (
               <span
                 key={`${tag}-${i}`}
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground"
+                className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground"
               >
                 {tag}
+                <button
+                  type="button"
+                  aria-label={`${tag} 삭제`}
+                  onClick={() => handleRemoveTag(i)}
+                  className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+                >
+                  ×
+                </button>
               </span>
             ))}
           </div>

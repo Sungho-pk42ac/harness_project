@@ -135,4 +135,108 @@ describe('NoteEditor', () => {
     expect(alertSpy).toHaveBeenCalledWith('저장에 실패했습니다');
     alertSpy.mockRestore();
   });
+
+  // ── TAG-2 (이슈 #7): 태그 개별 삭제 ──────────────────────────────
+
+  it('[정상] NoteEditor — should 클릭한 태그만 제거하고 나머지는 남긴다 when 특정 칩의 삭제(×) 버튼을 클릭한다', async () => {
+    // Arrange: 두 태그를 가진 기존 노트를 편집으로 연다
+    mockNotes = [
+      {
+        id: '1',
+        title: 't',
+        content: 'c',
+        tags: ['회의', '아이디어'],
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ];
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
+    // Act: "회의" 칩의 삭제 버튼 클릭
+    await user.click(screen.getByRole('button', { name: '회의 삭제' }));
+    // Assert
+    expect(screen.queryByText('회의')).not.toBeInTheDocument();
+    expect(screen.getByText('아이디어')).toBeInTheDocument();
+  });
+
+  it('[경계] NoteEditor — should 클릭한 칩(인덱스)만 제거한다 when 같은 이름 태그가 여러 개 있다', async () => {
+    // Arrange: 같은 이름 태그 2개
+    mockNotes = [
+      {
+        id: '1',
+        title: 't',
+        content: 'c',
+        tags: ['dup', 'dup'],
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ];
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
+    expect(screen.getAllByText('dup')).toHaveLength(2);
+    // Act: 첫 번째 "dup" 칩의 삭제 버튼만 클릭
+    await user.click(screen.getAllByRole('button', { name: 'dup 삭제' })[0]);
+    // Assert: 하나만 남는다
+    expect(screen.getAllByText('dup')).toHaveLength(1);
+  });
+
+  it('[경계] NoteEditor — should 칩 목록이 사라진다(미표시) when 유일한 태그를 삭제해 tags가 비게 된다', async () => {
+    // Arrange: 태그 1개
+    mockNotes = [
+      { id: '1', title: 't', content: 'c', tags: ['solo'], createdAt: 'now', updatedAt: 'now' },
+    ];
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
+    // Act
+    await user.click(screen.getByRole('button', { name: 'solo 삭제' }));
+    // Assert: 칩이 사라진다
+    expect(screen.queryByText('solo')).not.toBeInTheDocument();
+  });
+
+  it('[정상] NoteEditor — should 줄어든 tags로 editNote(id, { title, content, tags })를 호출한다 when 태그 삭제 후 저장한다', async () => {
+    // Arrange
+    mockNotes = [
+      {
+        id: '1',
+        title: '기존제목',
+        content: '기존내용',
+        tags: ['회의', '아이디어'],
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ];
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
+    // Act: "회의" 삭제 후 저장
+    await user.click(screen.getByRole('button', { name: '회의 삭제' }));
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    // Assert: 줄어든 tags로 저장된다
+    expect(editNote).toHaveBeenCalledWith('1', {
+      title: '기존제목',
+      content: '기존내용',
+      tags: ['아이디어'],
+    });
+  });
+
+  it('[정상] NoteEditor — should 키보드로 삭제 버튼을 활성화하면 해당 태그가 제거된다 when 칩 삭제 버튼에 포커스 후 Enter/Space를 누른다 (접근성)', async () => {
+    // Arrange
+    mockNotes = [
+      {
+        id: '1',
+        title: 't',
+        content: 'c',
+        tags: ['회의', '아이디어'],
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ];
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
+    // Act: 삭제 버튼에 포커스 후 키보드(Enter)로 활성화
+    const removeBtn = screen.getByRole('button', { name: '회의 삭제' });
+    removeBtn.focus();
+    await user.keyboard('{Enter}');
+    // Assert
+    expect(screen.queryByText('회의')).not.toBeInTheDocument();
+  });
 });
