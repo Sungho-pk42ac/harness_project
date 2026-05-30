@@ -3,6 +3,7 @@ import { NoteItem } from './NoteItem';
 import { partitionByPinned } from '../utils/partitionByPinned';
 import { activeNotes } from '../utils/trash';
 import { sortNotes, type SortBy, type SortDir } from '../utils/sortNotes';
+import { filterNotes } from '../utils/filterNotes';
 import type { Note } from '../types/note';
 
 interface NoteListProps {
@@ -10,6 +11,7 @@ interface NoteListProps {
   onSelect: (id: string) => void;
   sortBy?: SortBy;
   sortDir?: SortDir;
+  searchQuery?: string;
 }
 
 export function NoteList({
@@ -17,6 +19,7 @@ export function NoteList({
   onSelect,
   sortBy = 'updatedAt',
   sortDir = 'desc',
+  searchQuery = '',
 }: NoteListProps) {
   const { notes, loading, error, removeNote, togglePin } = useNotes();
 
@@ -67,9 +70,14 @@ export function NoteList({
     return <p className="text-sm text-muted-foreground text-center py-8">노트가 없습니다</p>;
   }
 
-  // 정렬을 먼저 적용한 뒤(원본 불변) 핀 섹션으로 분리한다 — 각 섹션이 같은 기준·방향으로 정렬됨
-  // (검색이 도입되면 filter → sort 순서로 합성; sort spec-fixed §4)
-  const sorted = sortNotes(active, sortBy, sortDir);
+  // 검색으로 먼저 거르고(filter) → 정렬(sort) → 핀 섹션 분리 순으로 합성한다 (search/sort spec §4)
+  const filtered = filterNotes(active, searchQuery);
+
+  if (filtered.length === 0) {
+    return <p className="text-sm text-muted-foreground text-center py-8">검색 결과가 없습니다</p>;
+  }
+
+  const sorted = sortNotes(filtered, sortBy, sortDir);
   const { pinned, others } = partitionByPinned(sorted);
 
   return (
