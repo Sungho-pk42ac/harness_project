@@ -4,5 +4,5 @@ export interface Note {
   content: string;
   createdAt: string;
   updatedAt: string;
-  // ❌ tags 필드는 아직 없음 — 강의에서 추가할 것
+  tags: string[]; // 기본값 []. 읽기 시 note.tags ?? [] 로 구버전 노트 방어 (ADR-0001)
 }
