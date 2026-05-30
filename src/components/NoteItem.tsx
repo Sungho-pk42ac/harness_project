@@ -5,9 +5,13 @@ interface NoteItemProps {
   isSelected: boolean;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onTogglePin: (id: string) => void;
 }
 
-export function NoteItem({ note, isSelected, onSelect, onDelete }: NoteItemProps) {
+export function NoteItem({ note, isSelected, onSelect, onDelete, onTogglePin }: NoteItemProps) {
+  // 구버전 노트(isPinned 없음) 방어 (pin ADR-0001)
+  const isPinned = note.isPinned ?? false;
+
   return (
     <div
       onClick={() => onSelect(note.id)}
@@ -19,15 +23,32 @@ export function NoteItem({ note, isSelected, onSelect, onDelete }: NoteItemProps
         <h3 className="font-semibold text-sm text-foreground line-clamp-1 flex-1">
           {note.title || '(제목 없음)'}
         </h3>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(note.id);
-          }}
-          className="text-muted-foreground hover:text-destructive text-xs shrink-0 transition-colors cursor-pointer"
-        >
-          삭제
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* 핀 토글 — 고정 시 인디고(primary) 활성, 미고정은 보조색. 카드 선택과 분리(stopPropagation) */}
+          <button
+            type="button"
+            aria-label={isPinned ? '고정 해제' : '고정'}
+            aria-pressed={isPinned}
+            onClick={(e) => {
+              e.stopPropagation();
+              onTogglePin(note.id);
+            }}
+            className={`text-xs transition-colors cursor-pointer ${
+              isPinned ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {isPinned ? '★' : '☆'}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(note.id);
+            }}
+            className="text-muted-foreground hover:text-destructive text-xs transition-colors cursor-pointer"
+          >
+            삭제
+          </button>
+        </div>
       </div>
       <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
         {note.content || '(내용 없음)'}

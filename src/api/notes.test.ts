@@ -30,7 +30,7 @@ describe('createNote', () => {
     // Arrange
     const fetchMock = stubFetchOk({ id: '1' });
     // Act
-    await createNote({ title: 't', content: 'c', tags: ['react', 'vite'] });
+    await createNote({ title: 't', content: 'c', tags: ['react', 'vite'], isPinned: false });
     // Assert
     expect(lastRequestBody(fetchMock)).toMatchObject({ tags: ['react', 'vite'] });
   });
@@ -46,7 +46,7 @@ describe('createNote', () => {
       updatedAt: 'now',
     });
     // Act
-    const result = await createNote({ title: 't', content: 'c', tags: ['x'] });
+    const result = await createNote({ title: 't', content: 'c', tags: ['x'], isPinned: false });
     // Assert
     expect(result).toMatchObject({ id: 'server-id', tags: ['x'] });
   });
@@ -55,7 +55,7 @@ describe('createNote', () => {
     // Arrange
     const fetchMock = stubFetchOk({ id: '1' });
     // Act
-    await createNote({ title: 't', content: 'c', tags: [] });
+    await createNote({ title: 't', content: 'c', tags: [], isPinned: false });
     // Assert: body.tags가 빈 배열로 그대로 전송되어야 한다
     expect(lastRequestBody(fetchMock)).toHaveProperty('tags', []);
   });
@@ -64,9 +64,9 @@ describe('createNote', () => {
     // Arrange: 실패 응답을 주도록 fetch 모킹
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
     // Act & Assert
-    await expect(createNote({ title: 't', content: 'c', tags: [] })).rejects.toThrow(
-      'Failed to create note',
-    );
+    await expect(
+      createNote({ title: 't', content: 'c', tags: [], isPinned: false }),
+    ).rejects.toThrow('Failed to create note');
   });
 });
 

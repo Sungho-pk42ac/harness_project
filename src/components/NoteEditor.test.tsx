@@ -54,6 +54,7 @@ describe('NoteEditor', () => {
         title: 't',
         content: 'c',
         tags: ['alpha', 'beta'],
+        isPinned: false,
         createdAt: 'now',
         updatedAt: 'now',
       },
@@ -86,6 +87,7 @@ describe('NoteEditor', () => {
         title: '기존제목',
         content: '기존내용',
         tags: ['old'],
+        isPinned: false,
         createdAt: 'now',
         updatedAt: 'now',
       },
@@ -147,6 +149,7 @@ describe('NoteEditor', () => {
         title: 't',
         content: 'c',
         tags: ['회의', '아이디어'],
+        isPinned: false,
         createdAt: 'now',
         updatedAt: 'now',
       },
@@ -168,6 +171,7 @@ describe('NoteEditor', () => {
         title: 't',
         content: 'c',
         tags: ['dup', 'dup'],
+        isPinned: false,
         createdAt: 'now',
         updatedAt: 'now',
       },
@@ -184,7 +188,15 @@ describe('NoteEditor', () => {
   it('[경계] NoteEditor — should 칩 목록이 사라진다(미표시) when 유일한 태그를 삭제해 tags가 비게 된다', async () => {
     // Arrange: 태그 1개
     mockNotes = [
-      { id: '1', title: 't', content: 'c', tags: ['solo'], createdAt: 'now', updatedAt: 'now' },
+      {
+        id: '1',
+        title: 't',
+        content: 'c',
+        tags: ['solo'],
+        isPinned: false,
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
     ];
     const user = userEvent.setup();
     render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
@@ -202,6 +214,7 @@ describe('NoteEditor', () => {
         title: '기존제목',
         content: '기존내용',
         tags: ['회의', '아이디어'],
+        isPinned: false,
         createdAt: 'now',
         updatedAt: 'now',
       },
@@ -227,6 +240,7 @@ describe('NoteEditor', () => {
         title: 't',
         content: 'c',
         tags: ['회의', '아이디어'],
+        isPinned: false,
         createdAt: 'now',
         updatedAt: 'now',
       },
@@ -266,7 +280,15 @@ describe('NoteEditor', () => {
   it('[예외] NoteEditor — should 추가되지 않고 "이미 있는 태그" 알림이 뜬다 when 기존 "work"에 "Work"를 입력 후 Enter', async () => {
     // Arrange: "work"를 가진 노트
     mockNotes = [
-      { id: '1', title: 't', content: 'c', tags: ['work'], createdAt: 'now', updatedAt: 'now' },
+      {
+        id: '1',
+        title: 't',
+        content: 'c',
+        tags: ['work'],
+        isPinned: false,
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
     ];
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     const user = userEvent.setup();
@@ -287,6 +309,7 @@ describe('NoteEditor', () => {
         title: 't',
         content: 'c',
         tags: ['a', 'b', 'c', 'd', 'e'],
+        isPinned: false,
         createdAt: 'now',
         updatedAt: 'now',
       },

@@ -10,6 +10,8 @@ interface NotesContextType {
   addNote: (title: string, content: string, tags: string[]) => Promise<void>;
   editNote: (id: string, updates: Partial<Note>) => Promise<void>;
   removeNote: (id: string) => Promise<void>;
+  // 핀 토글(pin ADR-0003): 현재 isPinned를 뒤집어 영속화 후 로컬 배열 교체
+  togglePin: (id: string) => Promise<void>;
 }
 
 const NotesContext = createContext<NotesContextType | null>(null);
@@ -28,8 +30,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 생성: api 응답으로 받은 노트를 로컬 상태에 append (자체 catch 없이 호출부로 전파)
+  // 새 노트는 핀이 꺼진 상태(isPinned: false)로 시작한다 (pin spec-fixed §5)
   const addNote = async (title: string, content: string, tags: string[]) => {
-    const created = await api.createNote({ title, content, tags });
+    const created = await api.createNote({ title, content, tags, isPinned: false });
     setNotes((prev) => [...prev, created]);
   };
 
@@ -44,8 +47,18 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
 
+  // 핀 토글: 현재 노트의 isPinned를 뒤집어 updateNote로 영속화, 응답으로 로컬 교체 (editNote와 동일 패턴)
+  const togglePin = async (id: string) => {
+    const current = notes.find((n) => n.id === id);
+    const next = !(current?.isPinned ?? false);
+    const updated = await api.updateNote(id, { isPinned: next });
+    setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)));
+  };
+
   return (
-    <NotesContext.Provider value={{ notes, loading, error, addNote, editNote, removeNote }}>
+    <NotesContext.Provider
+      value={{ notes, loading, error, addNote, editNote, removeNote, togglePin }}
+    >
       {children}
     </NotesContext.Provider>
   );

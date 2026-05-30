@@ -44,6 +44,7 @@ describe('addNote', () => {
       title: 't',
       content: 'c',
       tags: ['a'],
+      isPinned: false,
       createdAt: 'now',
       updatedAt: 'now',
     });
@@ -52,11 +53,12 @@ describe('addNote', () => {
     await act(async () => {
       await ctx.addNote('t', 'c', ['a']);
     });
-    // Assert
+    // Assert: 새 노트는 isPinned: false로 시작한다 (pin spec-fixed §5)
     expect(mockedApi.createNote).toHaveBeenCalledWith({
       title: 't',
       content: 'c',
       tags: ['a'],
+      isPinned: false,
     });
   });
 
@@ -67,6 +69,7 @@ describe('addNote', () => {
       title: 't',
       content: 'c',
       tags: ['a', 'b'],
+      isPinned: false,
       createdAt: 'now',
       updatedAt: 'now',
     };
@@ -87,6 +90,7 @@ describe('addNote', () => {
       title: 't',
       content: 'c',
       tags: [],
+      isPinned: false,
       createdAt: 'now',
       updatedAt: 'now',
     });
@@ -95,11 +99,12 @@ describe('addNote', () => {
     await act(async () => {
       await ctx.addNote('t', 'c', []);
     });
-    // Assert: api.createNote가 빈 tags를 그대로 받아야 한다
+    // Assert: api.createNote가 빈 tags와 isPinned: false를 그대로 받아야 한다
     expect(mockedApi.createNote).toHaveBeenCalledWith({
       title: 't',
       content: 'c',
       tags: [],
+      isPinned: false,
     });
   });
 
@@ -118,6 +123,7 @@ describe('editNote', () => {
     title: 't',
     content: 'c',
     tags: ['old'],
+    isPinned: false,
     createdAt: 'now',
     updatedAt: 'now',
   };
