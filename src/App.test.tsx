@@ -126,3 +126,63 @@ describe('App (로그아웃·사용자 표시)', () => {
     expect(screen.getByText('test@test.com')).toBeInTheDocument();
   });
 });
+
+describe('App (로그인 실패 에러)', () => {
+  beforeEach(() => {
+    vi.mocked(notesApi.fetchNotes).mockResolvedValue([]);
+    localStorage.clear();
+  });
+
+  const submitLogin = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.type(screen.getByPlaceholderText('이메일'), 'x@x.com');
+    await user.type(screen.getByPlaceholderText('비밀번호'), 'pw');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+  };
+
+  it('[예외] LoginPage — should "이메일 또는 비밀번호가 올바르지 않습니다." 인라인 메시지를 보여준다 when 잘못된 자격증명으로 실패한다', async () => {
+    vi.mocked(authApi.login).mockRejectedValue(new Error('Invalid credentials'));
+    const user = userEvent.setup();
+    render(<App />);
+    await submitLogin(user);
+    expect(
+      await screen.findByText('이메일 또는 비밀번호가 올바르지 않습니다.'),
+    ).toBeInTheDocument();
+  });
+
+  it('[예외] LoginPage — should alert를 호출하지 않는다 when 로그인이 실패한다', async () => {
+    vi.mocked(authApi.login).mockRejectedValue(new Error('Invalid credentials'));
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(<App />);
+    await submitLogin(user);
+    await screen.findByText('이메일 또는 비밀번호가 올바르지 않습니다.');
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it('[예외] LoginPage — should 사용자 친화적 에러 메시지를 보여준다 when 네트워크 오류로 실패한다', async () => {
+    vi.mocked(authApi.login).mockRejectedValue(new Error('Failed to login'));
+    const user = userEvent.setup();
+    render(<App />);
+    await submitLogin(user);
+    expect(
+      await screen.findByText('로그인 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.'),
+    ).toBeInTheDocument();
+  });
+
+  it('[정상] LoginPage — should 에러가 사라지고 노트 화면으로 전환된다 when 실패 후 올바른 계정으로 재시도한다', async () => {
+    vi.mocked(authApi.login).mockRejectedValueOnce(new Error('Invalid credentials'));
+    const user = userEvent.setup();
+    render(<App />);
+    await submitLogin(user);
+    expect(
+      await screen.findByText('이메일 또는 비밀번호가 올바르지 않습니다.'),
+    ).toBeInTheDocument();
+    // 재시도: 이번엔 성공
+    vi.mocked(authApi.login).mockResolvedValue(seededUser);
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+    // 노트 화면 전환 + 에러 사라짐
+    expect(await screen.findByRole('button', { name: '+ 새 노트' })).toBeInTheDocument();
+    expect(screen.queryByText('이메일 또는 비밀번호가 올바르지 않습니다.')).not.toBeInTheDocument();
+  });
+});
