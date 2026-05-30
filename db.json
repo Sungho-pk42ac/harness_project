@@ -36,5 +36,17 @@
       "id": "uaJiQozUgk4"
     }
   ],
+  "users": [
+    {
+      "id": "u1",
+      "email": "test@test.com",
+      "password": "1234"
+    },
+    {
+      "id": "u2",
+      "email": "admin@test.com",
+      "password": "admin"
+    }
+  ],
   "$schema": "./node_modules/json-server/schema.json"
 }
