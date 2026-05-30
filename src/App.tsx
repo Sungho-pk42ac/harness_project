@@ -5,7 +5,9 @@ import { Layout } from './components/Layout';
 import { NoteList } from './components/NoteList';
 import { NoteEditor } from './components/NoteEditor';
 import { TrashList } from './components/TrashList';
+import { SortControl } from './components/SortControl';
 import { LoginPage } from './components/LoginPage';
+import type { SortBy, SortDir } from './utils/sortNotes';
 
 // 인증 게이트 — 미로그인 시 로그인 화면, 로그인 시 노트 화면 (ADR-0003)
 function AppContent() {
@@ -14,6 +16,9 @@ function AppContent() {
   const [isCreating, setIsCreating] = useState(false);
   // 휴지통/노트 화면 상태 — 순수 화면 상태이므로 App이 소유 (trash spec-fixed §1-3)
   const [view, setView] = useState<'notes' | 'trash'>('notes');
+  // 정렬 기준·방향 — 화면 상태(App 소유), 기본 최근 수정 먼저 (sort spec-fixed §1)
+  const [sortBy, setSortBy] = useState<SortBy>('updatedAt');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const handleSelectNote = (id: string) => {
     setSelectedNoteId(id);
@@ -55,7 +60,20 @@ function AppContent() {
           view === 'trash' ? (
             <TrashList />
           ) : (
-            <NoteList selectedNoteId={selectedNoteId} onSelect={handleSelectNote} />
+            <>
+              <SortControl
+                sortBy={sortBy}
+                sortDir={sortDir}
+                onSortByChange={setSortBy}
+                onSortDirChange={setSortDir}
+              />
+              <NoteList
+                selectedNoteId={selectedNoteId}
+                onSelect={handleSelectNote}
+                sortBy={sortBy}
+                sortDir={sortDir}
+              />
+            </>
           )
         }
         main={
