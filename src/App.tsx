@@ -8,7 +8,7 @@ import { LoginPage } from './components/LoginPage';
 
 // 인증 게이트 — 미로그인 시 로그인 화면, 로그인 시 노트 화면 (ADR-0003)
 function AppContent() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -26,6 +26,11 @@ function AppContent() {
     setIsCreating(false);
     // 저장 후 선택 상태는 유지
   };
+
+  // 세션 복원 판정 중에는 가드 — LoginPage 깜빡임 방지 (ADR-0002)
+  if (loading) {
+    return null;
+  }
 
   if (!user) {
     return <LoginPage />;
