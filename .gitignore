@@ -27,3 +27,6 @@ dist-ssr/
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code 로컬 개인 설정 (공유 설정 .claude/settings.json은 추적)
+.claude/settings.local.json
