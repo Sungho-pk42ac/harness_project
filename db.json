@@ -17,9 +17,9 @@
     {
       "id": "3",
       "title": "세 번째 노트",
-      "content": "React와 TypeScript를 공부 중입니다.",
+      "content": "ㅊㅊ",
       "createdAt": "2024-01-03T00:00:00.000Z",
-      "updatedAt": "2024-01-03T00:00:00.000Z"
+      "updatedAt": "2026-05-30T07:46:23.014Z"
     },
     {
       "title": "내일의 하루는?",
@@ -27,6 +27,13 @@
       "createdAt": "2026-03-23T13:57:30.308Z",
       "updatedAt": "2026-03-23T13:57:30.308Z",
       "id": "dP_NPYuHV94"
+    },
+    {
+      "title": "ddd",
+      "content": "dd",
+      "createdAt": "2026-05-30T07:44:23.029Z",
+      "updatedAt": "2026-05-30T07:44:23.029Z",
+      "id": "uaJiQozUgk4"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"

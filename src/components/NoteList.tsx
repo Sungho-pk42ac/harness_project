@@ -9,6 +9,16 @@ interface NoteListProps {
 export function NoteList({ selectedNoteId, onSelect }: NoteListProps) {
   const { notes, loading, error, removeNote } = useNotes();
 
+  // 노트 삭제 — 실패 시 사용자에게 알림 (NoteEditor.handleSave와 동일한 에러 처리 패턴)
+  const handleDelete = async (id: string) => {
+    try {
+      await removeNote(id);
+    } catch (e) {
+      console.error(e);
+      alert('삭제에 실패했습니다');
+    }
+  };
+
   if (loading) {
     return (
       <p className="text-sm text-muted-foreground text-center py-8">로딩 중...</p>
@@ -38,7 +48,7 @@ export function NoteList({ selectedNoteId, onSelect }: NoteListProps) {
           note={note}
           isSelected={note.id === selectedNoteId}
           onSelect={onSelect}
-          onDelete={removeNote}
+          onDelete={handleDelete}
         />
       ))}
     </>
