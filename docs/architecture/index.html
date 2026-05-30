@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>프로젝트 아키텍처</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      font-family: -apple-system, "Segoe UI", sans-serif;
+    }
+    h1 { font-weight: 600; font-size: 18px; color: #f0f0f0; }
+    p.sub { color: #888; font-size: 13px; margin-top: 4px; }
+    .mermaid { display: flex; justify-content: center; }
+  </style>
+</head>
+<body>
+  <h1>프로젝트 아키텍처 다이어그램</h1>
+  <p class="sub">src/ 의존성 분석 · 화살표 = "import (사용)" 방향</p>
+  <pre class="mermaid">
+graph TD
+    subgraph entry["진입점"]
+        main["main.tsx"]
+    end
+    subgraph app["앱 셸"]
+        App["App.tsx"]
+    end
+    subgraph context["context/"]
+        NotesContext["NotesContext"]
+    end
+    subgraph api["api/"]
+        apiNotes["notes.ts"]
+    end
+    subgraph types["types/"]
+        note["note.ts"]
+    end
+    subgraph components["components/"]
+        Layout["Layout"]
+        NoteList["NoteList"]
+        NoteItem["NoteItem"]
+        NoteEditor["NoteEditor"]
+    end
+    subgraph test["테스트 인프라 (격리됨)"]
+        testSetup["test-setup.ts"]
+    end
+
+    main --> App
+    App --> NotesContext
+    App --> Layout
+    App --> NoteList
+    App --> NoteEditor
+    NotesContext --> apiNotes
+    NotesContext --> note
+    apiNotes --> note
+    NoteEditor --> NotesContext
+    NoteList --> NotesContext
+    NoteList --> NoteItem
+    NoteItem --> note
+  </pre>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "dark" });
+  </script>
+</body>
+</html>
