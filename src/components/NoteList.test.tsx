@@ -73,4 +73,24 @@ describe('NoteList (핀 섹션 분기)', () => {
     expect(screen.getByText('활성노트')).toBeInTheDocument();
     expect(screen.queryByText('삭제된노트')).not.toBeInTheDocument();
   });
+
+  // ── 검색 필터·빈 결과 (SEARCH-1·2·3) ──
+  it('[정상] should searchQuery로 제목/본문/태그를 걸러 표시한다', () => {
+    mockNotes = [makeNote('1', '주간회의', false), makeNote('2', '장보기', false)];
+    render(<NoteList selectedNoteId={null} onSelect={noop} searchQuery="회의" />);
+    expect(screen.getByText('주간회의')).toBeInTheDocument();
+    expect(screen.queryByText('장보기')).not.toBeInTheDocument();
+  });
+
+  it('[경계] should 검색 결과가 0개면 "검색 결과가 없습니다"를, 원본 0개면 "노트가 없습니다"를 보인다', () => {
+    mockNotes = [makeNote('1', '주간회의', false)];
+    const { rerender } = render(
+      <NoteList selectedNoteId={null} onSelect={noop} searchQuery="없는검색어" />,
+    );
+    expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument();
+    // 원본이 0개일 때는 다른 안내
+    mockNotes = [];
+    rerender(<NoteList selectedNoteId={null} onSelect={noop} searchQuery="" />);
+    expect(screen.getByText('노트가 없습니다')).toBeInTheDocument();
+  });
 });

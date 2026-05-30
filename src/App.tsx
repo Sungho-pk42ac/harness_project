@@ -6,6 +6,7 @@ import { NoteList } from './components/NoteList';
 import { NoteEditor } from './components/NoteEditor';
 import { TrashList } from './components/TrashList';
 import { SortControl } from './components/SortControl';
+import { SearchBar } from './components/SearchBar';
 import { LoginPage } from './components/LoginPage';
 import type { SortBy, SortDir } from './utils/sortNotes';
 
@@ -19,6 +20,8 @@ function AppContent() {
   // 정렬 기준·방향 — 화면 상태(App 소유), 기본 최근 수정 먼저 (sort spec-fixed §1)
   const [sortBy, setSortBy] = useState<SortBy>('updatedAt');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  // 검색어 — 화면 상태(App 소유), 원본 불변 필터 (search spec-fixed §1)
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleSelectNote = (id: string) => {
     setSelectedNoteId(id);
@@ -61,6 +64,7 @@ function AppContent() {
             <TrashList />
           ) : (
             <>
+              <SearchBar value={searchQuery} onChange={setSearchQuery} />
               <SortControl
                 sortBy={sortBy}
                 sortDir={sortDir}
@@ -72,6 +76,7 @@ function AppContent() {
                 onSelect={handleSelectNote}
                 sortBy={sortBy}
                 sortDir={sortDir}
+                searchQuery={searchQuery}
               />
             </>
           )
