@@ -10,12 +10,22 @@ import { test, expect } from '@playwright/test';
 // 테스트 간 충돌을 막는 고유 제목 (실행마다 db 초기화 + 직렬 실행)
 const uniqueTitle = (prefix: string) => `${prefix}-${Date.now()}`;
 
+// 로그인 게이트(LOGIN-1~5) 통과 — 시드 계정으로 로그인해 노트 화면에 진입한다
+async function loginAndOpenNotes(page: import('@playwright/test').Page) {
+  await page.goto('/');
+  await page.getByPlaceholder('이메일').fill('test@test.com');
+  await page.getByPlaceholder('비밀번호').fill('1234');
+  await page.getByRole('button', { name: '로그인' }).click();
+  // 로그인 성공 후 노트 화면(+ 새 노트 버튼)이 나타날 때까지 대기
+  await expect(page.getByRole('button', { name: '+ 새 노트' })).toBeVisible();
+}
+
 test.describe('노트 태그 (PRD tag)', () => {
   test('[J1] 새 노트에 태그를 달고 저장하면 다시 열었을 때 태그가 보인다 (U1, FR-1·8·9)', async ({
     page,
   }) => {
     const title = uniqueTitle('J1');
-    await page.goto('/');
+    await loginAndOpenNotes(page);
     await page.getByRole('button', { name: '+ 새 노트' }).click();
 
     await page.getByPlaceholder('제목').fill(title);
@@ -39,7 +49,7 @@ test.describe('노트 태그 (PRD tag)', () => {
 
   test('[J2] 쉼표(,)로도 태그가 칩으로 추가된다 (U1, FR-1)', async ({ page }) => {
     const title = uniqueTitle('J2');
-    await page.goto('/');
+    await loginAndOpenNotes(page);
     await page.getByRole('button', { name: '+ 새 노트' }).click();
 
     await page.getByPlaceholder('제목').fill(title);
