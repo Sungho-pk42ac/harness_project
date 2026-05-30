@@ -1,5 +1,8 @@
 import { ReactNode } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNotes } from '../context/NotesContext';
+import { notesToJson, buildExportFilename } from '../lib/export';
+import { downloadTextFile } from '../lib/download';
 
 interface LayoutProps {
   onNewNote: () => void;
@@ -12,6 +15,22 @@ interface LayoutProps {
 
 export function Layout({ onNewNote, sidebar, main, view, onToggleView }: LayoutProps) {
   const { user, logout } = useAuth();
+  const { notes } = useNotes();
+
+  // 전체 노트를 JSON 한 파일로 백업한다 (export spec-fixed §2·§5). 노트 0건이면 버튼 비활성.
+  const handleBackup = () => {
+    if (notes.length === 0) return;
+    try {
+      downloadTextFile(
+        buildExportFilename('notes-backup', 'json'),
+        notesToJson(notes),
+        'application/json',
+      );
+    } catch (e) {
+      console.error(e);
+      alert('백업에 실패했습니다');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,6 +48,14 @@ export function Layout({ onNewNote, sidebar, main, view, onToggleView }: LayoutP
             className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             {view === 'trash' ? '노트로 돌아가기' : '휴지통'}
+          </button>
+          {/* 전체 노트 JSON 백업 — 노트 0건이면 비활성 */}
+          <button
+            onClick={handleBackup}
+            disabled={notes.length === 0}
+            className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+          >
+            백업
           </button>
           <button
             onClick={onNewNote}

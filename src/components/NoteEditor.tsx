@@ -3,6 +3,8 @@ import { useNotes } from '../context/NotesContext';
 import { canAddTag } from '../lib/tag';
 import { isTrashed } from '../utils/trash';
 import { MarkdownPreview } from './MarkdownPreview';
+import { noteToMarkdown, buildExportFilename } from '../lib/export';
+import { downloadTextFile } from '../lib/download';
 
 type EditorView = 'edit' | 'preview';
 
@@ -61,6 +63,19 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
   // 칩 개별 삭제 — 인덱스 기반 제거 (같은 이름이 여러 개여도 클릭한 칩만)
   const handleRemoveTag = (index: number) => {
     setTags((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // 현재 저장된 노트를 마크다운(.md)으로 내보낸다 (export spec-fixed §2·§5)
+  // 미저장 화면 상태가 아니라 저장된 selectedNote 기준으로 내보낸다.
+  const handleExport = () => {
+    if (!selectedNote) return;
+    try {
+      const md = noteToMarkdown(selectedNote);
+      downloadTextFile(buildExportFilename(selectedNote.title, 'md'), md, 'text/markdown');
+    } catch (e) {
+      console.error(e);
+      alert('내보내기에 실패했습니다');
+    }
   };
 
   const handleSave = async () => {
@@ -191,6 +206,16 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
         >
           취소
         </button>
+        {/* 내보내기(.md) — 저장된 노트가 있을 때만(미저장 새 노트엔 미표시) (export spec-fixed §2) */}
+        {selectedNote && (
+          <button
+            type="button"
+            onClick={handleExport}
+            className="px-5 py-2 rounded-xl text-sm font-semibold text-muted-foreground bg-muted hover:bg-border transition-colors cursor-pointer"
+          >
+            내보내기
+          </button>
+        )}
       </div>
     </div>
   );
