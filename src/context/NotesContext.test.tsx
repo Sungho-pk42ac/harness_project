@@ -175,3 +175,116 @@ describe('editNote', () => {
     );
   });
 });
+
+// ── 휴지통(소프트 삭제/복원/영구삭제) (TRASH-1·3·4, spec-fixed §2) ──
+describe('removeNote (소프트 삭제)', () => {
+  const initial: Note = {
+    id: '1',
+    title: 't',
+    content: 'c',
+    tags: [],
+    isPinned: false,
+    createdAt: 'now',
+    updatedAt: 'now',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedApi.fetchNotes.mockResolvedValue([initial]);
+  });
+
+  it('[정상] removeNote — should api.updateNote(id,{deletedAt})로 소프트 삭제하고 deleteNote는 호출하지 않는다', async () => {
+    mockedApi.updateNote.mockResolvedValue({ ...initial, deletedAt: '2026-05-31T02:00:00.000Z' });
+    await renderProvider();
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('1'));
+    await act(async () => {
+      await ctx.removeNote('1');
+    });
+    // updateNote가 deletedAt을 채워 호출되어야 한다
+    expect(mockedApi.updateNote).toHaveBeenCalledTimes(1);
+    const [calledId, updates] = mockedApi.updateNote.mock.calls[0];
+    expect(calledId).toBe('1');
+    expect(updates.deletedAt).toBeTruthy();
+    // 영구 삭제(deleteNote)는 호출되지 않는다
+    expect(mockedApi.deleteNote).not.toHaveBeenCalled();
+  });
+
+  it('[정상] removeNote — should 노트를 제거하지 않고 deletedAt이 채워진 노트로 교체한다 (휴지통에 남아야 함)', async () => {
+    const soft = { ...initial, deletedAt: '2026-05-31T02:00:00.000Z' };
+    mockedApi.updateNote.mockResolvedValue(soft);
+    await renderProvider();
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('1'));
+    await act(async () => {
+      await ctx.removeNote('1');
+    });
+    // notes에서 사라지지 않고 deletedAt이 채워진 채 남는다
+    expect(ctx.notes).toHaveLength(1);
+    expect(ctx.notes[0].deletedAt).toBeTruthy();
+  });
+});
+
+describe('restoreNote', () => {
+  const trashed: Note = {
+    id: '1',
+    title: 't',
+    content: 'c',
+    tags: [],
+    isPinned: false,
+    deletedAt: '2026-05-31T02:00:00.000Z',
+    createdAt: 'now',
+    updatedAt: 'now',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedApi.fetchNotes.mockResolvedValue([trashed]);
+  });
+
+  it('[정상] restoreNote — should updateNote(id,{deletedAt:null})로 복원하고 응답으로 교체한다', async () => {
+    const restored = { ...trashed, deletedAt: undefined };
+    mockedApi.updateNote.mockResolvedValue(restored);
+    await renderProvider();
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('1'));
+    await act(async () => {
+      await ctx.restoreNote('1');
+    });
+    expect(mockedApi.updateNote).toHaveBeenCalledWith('1', { deletedAt: null });
+    expect(ctx.notes[0].deletedAt).toBeFalsy();
+  });
+});
+
+describe('purgeNote (영구 삭제)', () => {
+  const trashed: Note = {
+    id: '1',
+    title: 't',
+    content: 'c',
+    tags: [],
+    isPinned: false,
+    deletedAt: '2026-05-31T02:00:00.000Z',
+    createdAt: 'now',
+    updatedAt: 'now',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedApi.fetchNotes.mockResolvedValue([trashed]);
+  });
+
+  it('[정상] purgeNote — should api.deleteNote(id)로 영구 삭제하고 로컬에서 제거한다', async () => {
+    mockedApi.deleteNote.mockResolvedValue(undefined);
+    await renderProvider();
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('1'));
+    await act(async () => {
+      await ctx.purgeNote('1');
+    });
+    expect(mockedApi.deleteNote).toHaveBeenCalledWith('1');
+    expect(ctx.notes).toHaveLength(0);
+  });
+
+  it('[예외] purgeNote — should 에러를 호출부로 전파한다 when api.deleteNote가 throw한다', async () => {
+    mockedApi.deleteNote.mockRejectedValue(new Error('boom'));
+    await renderProvider();
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('1'));
+    await expect(ctx.purgeNote('1')).rejects.toThrow('boom');
+  });
+});

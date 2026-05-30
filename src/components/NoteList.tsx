@@ -1,6 +1,7 @@
 import { useNotes } from '../context/NotesContext';
 import { NoteItem } from './NoteItem';
 import { partitionByPinned } from '../utils/partitionByPinned';
+import { activeNotes } from '../utils/trash';
 import type { Note } from '../types/note';
 
 interface NoteListProps {
@@ -51,12 +52,15 @@ export function NoteList({ selectedNoteId, onSelect }: NoteListProps) {
     return <p className="text-sm text-destructive text-center py-8">오류: {error}</p>;
   }
 
-  if (notes.length === 0) {
+  // 일반 목록은 활성 노트(삭제되지 않은 노트)만 표시한다 (trash spec-fixed §3-1)
+  const active = activeNotes(notes);
+
+  if (active.length === 0) {
     return <p className="text-sm text-muted-foreground text-center py-8">노트가 없습니다</p>;
   }
 
   // 고정/일반 2섹션 분기 — 원본 불변 파생 계산 (pin spec-fixed §2·§4)
-  const { pinned, others } = partitionByPinned(notes);
+  const { pinned, others } = partitionByPinned(active);
 
   return (
     <>

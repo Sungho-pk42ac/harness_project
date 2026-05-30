@@ -18,12 +18,13 @@ vi.mock('../context/NotesContext', () => ({
   }),
 }));
 
-const makeNote = (id: string, title: string, isPinned: boolean): Note => ({
+const makeNote = (id: string, title: string, isPinned: boolean, deletedAt?: string): Note => ({
   id,
   title,
   content: '내용',
   tags: [],
   isPinned,
+  deletedAt,
   createdAt: '2026-05-31T00:00:00.000Z',
   updatedAt: '2026-05-31T00:00:00.000Z',
 });
@@ -64,5 +65,12 @@ describe('NoteList (핀 섹션 분기)', () => {
     render(<NoteList selectedNoteId={null} onSelect={noop} />);
     await user.click(screen.getByRole('button', { name: '고정' }));
     expect(togglePin).toHaveBeenCalledWith('1');
+  });
+
+  it('[정상] should 삭제된(deletedAt) 노트는 일반 목록에 표시하지 않는다 (TRASH-1 B)', () => {
+    mockNotes = [makeNote('1', '활성노트', false), makeNote('2', '삭제된노트', false, 'x')];
+    render(<NoteList selectedNoteId={null} onSelect={noop} />);
+    expect(screen.getByText('활성노트')).toBeInTheDocument();
+    expect(screen.queryByText('삭제된노트')).not.toBeInTheDocument();
   });
 });

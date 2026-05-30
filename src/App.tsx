@@ -4,6 +4,7 @@ import { NotesProvider } from './context/NotesContext';
 import { Layout } from './components/Layout';
 import { NoteList } from './components/NoteList';
 import { NoteEditor } from './components/NoteEditor';
+import { TrashList } from './components/TrashList';
 import { LoginPage } from './components/LoginPage';
 
 // 인증 게이트 — 미로그인 시 로그인 화면, 로그인 시 노트 화면 (ADR-0003)
@@ -11,6 +12,8 @@ function AppContent() {
   const { user, loading } = useAuth();
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  // 휴지통/노트 화면 상태 — 순수 화면 상태이므로 App이 소유 (trash spec-fixed §1-3)
+  const [view, setView] = useState<'notes' | 'trash'>('notes');
 
   const handleSelectNote = (id: string) => {
     setSelectedNoteId(id);
@@ -20,6 +23,12 @@ function AppContent() {
   const handleNewNote = () => {
     setSelectedNoteId(null);
     setIsCreating(true);
+    setView('notes'); // 새 노트 작성은 노트 화면에서
+  };
+
+  // 휴지통/노트 화면 토글
+  const handleToggleView = () => {
+    setView((prev) => (prev === 'trash' ? 'notes' : 'trash'));
   };
 
   const handleDone = () => {
@@ -40,7 +49,15 @@ function AppContent() {
     <NotesProvider>
       <Layout
         onNewNote={handleNewNote}
-        sidebar={<NoteList selectedNoteId={selectedNoteId} onSelect={handleSelectNote} />}
+        view={view}
+        onToggleView={handleToggleView}
+        sidebar={
+          view === 'trash' ? (
+            <TrashList />
+          ) : (
+            <NoteList selectedNoteId={selectedNoteId} onSelect={handleSelectNote} />
+          )
+        }
         main={
           <NoteEditor selectedNoteId={selectedNoteId} isCreating={isCreating} onDone={handleDone} />
         }
