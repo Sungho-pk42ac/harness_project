@@ -117,7 +117,8 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
                 key={`${tag}-${i}`}
                 className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground"
               >
-                {tag}
+                {/* 라벨을 별도 요소로 분리 — 삭제 버튼(×) 텍스트와 섞이지 않게(E2E exact 매칭 보존) */}
+                <span>{tag}</span>
                 <button
                   type="button"
                   aria-label={`${tag} 삭제`}
