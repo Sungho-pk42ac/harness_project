@@ -288,3 +288,52 @@ describe('purgeNote (영구 삭제)', () => {
     await expect(ctx.purgeNote('1')).rejects.toThrow('boom');
   });
 });
+
+// ── 복제 (DUPLICATE-1~3, spec-fixed §5) ──
+describe('duplicateNote', () => {
+  const original: Note = {
+    id: '1',
+    title: '회의록',
+    content: '내용',
+    tags: ['업무'],
+    isPinned: false,
+    createdAt: 'now',
+    updatedAt: 'now',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedApi.fetchNotes.mockResolvedValue([original]);
+  });
+
+  it('[정상] duplicateNote — should createNote에 (사본) 제목·본문·태그를 넘기고 생성 노트를 반환한다', async () => {
+    const created: Note = {
+      id: '2',
+      title: '회의록 (사본)',
+      content: '내용',
+      tags: ['업무'],
+      isPinned: false,
+      createdAt: 'now2',
+      updatedAt: 'now2',
+    };
+    mockedApi.createNote.mockResolvedValue(created);
+    await renderProvider();
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('1'));
+    let returned: Note | undefined;
+    await act(async () => {
+      returned = await ctx.duplicateNote('1');
+    });
+    expect(mockedApi.createNote).toHaveBeenCalledWith(
+      expect.objectContaining({ title: '회의록 (사본)', content: '내용', tags: ['업무'] }),
+    );
+    expect(returned).toEqual(created);
+    // 새 노트가 목록에 추가된다
+    expect(ctx.notes.some((n) => n.id === '2')).toBe(true);
+  });
+
+  it('[예외] duplicateNote — should 원본이 없으면 에러를 던진다', async () => {
+    await renderProvider();
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('1'));
+    await expect(ctx.duplicateNote('없는id')).rejects.toThrow();
+  });
+});

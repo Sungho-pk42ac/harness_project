@@ -21,7 +21,7 @@ export function NoteList({
   sortDir = 'desc',
   searchQuery = '',
 }: NoteListProps) {
-  const { notes, loading, error, removeNote, togglePin } = useNotes();
+  const { notes, loading, error, removeNote, togglePin, duplicateNote } = useNotes();
 
   // 노트 삭제 — 실패 시 사용자에게 알림 (NoteEditor.handleSave와 동일한 에러 처리 패턴)
   const handleDelete = async (id: string) => {
@@ -43,6 +43,17 @@ export function NoteList({
     }
   };
 
+  // 복제 — 생성된 복제본을 선택(열기)으로 이동, 실패 시 알림 (duplicate spec-fixed §5)
+  const handleDuplicate = async (id: string) => {
+    try {
+      const created = await duplicateNote(id);
+      onSelect(created.id);
+    } catch (e) {
+      console.error(e);
+      alert('복제에 실패했습니다');
+    }
+  };
+
   // 노트 카드 렌더 헬퍼 (고정/일반 섹션이 동일하게 사용)
   const renderItem = (note: Note) => (
     <NoteItem
@@ -52,6 +63,7 @@ export function NoteList({
       onSelect={onSelect}
       onDelete={handleDelete}
       onTogglePin={handleTogglePin}
+      onDuplicate={handleDuplicate}
     />
   );
 
