@@ -4,5 +4,5 @@ export interface Note {
   content: string;
   createdAt: string;
   updatedAt: string;
-  // ❌ tags 필드는 아직 없음 — 강의에서 추가할 것
+  tags: string[]; // 신규. 기본값 [] (RED 단계: 타입만 추가, 동작 미구현)
 }
