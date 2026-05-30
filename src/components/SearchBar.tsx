@@ -15,7 +15,7 @@ export function SearchBar({ value, onChange }: SearchBarProps) {
         aria-label="노트 검색"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="검색 (제목·본문·태그)"
+        placeholder="검색어를 입력하세요"
         className="w-full text-sm text-foreground bg-card border border-border rounded-lg pl-3 pr-8 py-1.5 outline-none placeholder:text-muted-foreground/60"
       />
       {value && (
