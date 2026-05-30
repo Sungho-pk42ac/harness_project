@@ -1,6 +1,6 @@
 # 기능 기획 워크플로 (Feature Planning Workflow)
 
-거친 아이디어 하나를 **구현 가능한 이슈 묶음**까지 끌고 가는 반복 가능한 절차입니다.
+거친 아이디어 하나를 **GitHub Issue로 등록된 구현 작업 묶음**까지 끌고 가는 반복 가능한 절차입니다.
 태그 기능을 이 절차로 기획했고, 각 단계의 실제 산출물을 예시로 함께 적었습니다. 새 기능도 같은 경로를 따르세요.
 
 ## 왜 이렇게 하나
@@ -24,7 +24,10 @@ spec-fixed.md ────────┤
 PRD.md  +  adr/ ──────┤
    │  ④ 수직 슬라이싱 (AC + DoD)
    ▼
-issues.md ────────────┘
+issues.md ────────────┤
+   │  ⑤ GitHub Issue 등록 (gh issue create)
+   ▼
+GitHub Issues ────────┘
    │
    ▼
 구현
@@ -36,6 +39,7 @@ issues.md ────────────┘
 | ② 인터뷰로 구체화 | `spec-fixed.md`   | 구체적으로 어떻게 동작해야 하는가?      |
 | ③ PRD + ADR       | `PRD.md`, `adr/*` | 무엇/왜(제품) + 어떻게/왜 이 선택(기술) |
 | ④ 수직 슬라이싱   | `issues.md`       | 어떤 순서로 쪼개 만들까?                |
+| ⑤ GitHub Issue    | GitHub Issues     | 누가 봐도 착수 가능한 작업으로 등록     |
 
 ---
 
@@ -83,7 +87,7 @@ issues.md ────────────┘
   - 이후 삭제·검증·표시 등 가치를 덧붙인다.
   - 각 이슈에 **AC(인수 기준)와 DoD(완료 정의)를 분리**해 적는다.
 - **산출물**: `issues.md`.
-- **다음 단계 트리거**: 각 이슈가 독립적으로 착수 가능할 만큼 명확할 때 → 구현 시작.
+- **다음 단계 트리거**: 각 이슈가 독립적으로 착수 가능할 만큼 명확할 때 → ⑤로.
 
 ### AC ≠ DoD (꼭 구분)
 
@@ -95,6 +99,24 @@ issues.md ────────────┘
 
 > **태그 예시** — [`tag/issues.md`](tag/issues.md): TAG-1(추가·영속화 = walking skeleton) → TAG-2(삭제) → TAG-3(검증·정규화) → TAG-4(목록 표시). 각 이슈는 AC를 Given/When/Then으로, DoD를 품질 게이트로 분리.
 
+## ⑤ GitHub Issue 등록 — `gh issue create`
+
+`issues.md`의 각 수직 슬라이스를 **실제 GitHub Issue로 등록**한다. `issues.md`는 버전관리되는 기록으로 남고, 등록은 그 사본을 GitHub로 올려 누구나 추적·착수할 수 있게 하는 단계다.
+
+- **입력**: `issues.md`.
+- **선행 조건**: 외부에 게시하는 작업이므로 **사용자 확인을 먼저** 받는다. `issues.md`가 확정된 뒤에만 진행.
+- **활동**:
+  1. **환경 확인** — `git remote -v`(리모트), `gh auth status`(`gh` 로그인 + `repo` 권한). 둘 중 하나라도 없으면 ⑤를 건너뛰고 그 사실을 사용자에게 알린다.
+  2. **라벨 준비** — `gh label list`로 기존 라벨을 보고, `issues.md`가 쓰는 라벨(`feature/<slug>`, `P0/P1/P2`, `slice:*` 등) 중 없는 것을 `gh label create`로 만든다. (존재하지 않는 라벨을 붙이면 `gh issue create`가 실패)
+  3. **이슈 생성** — 이슈마다 본문(설명·범위·AC·DoD)을 임시 파일에 쓰고 `gh issue create --title … --body-file … --label …`. 한글 본문은 셸 이스케이프 깨짐을 피하기 위해 **`--body-file`** 을 쓴다. 본문 머리에 `issues.md`·PRD·의존 이슈 링크를 적어 추적성을 준다.
+  4. **마무리** — 생성된 이슈 URL 목록을 사용자에게 보여주고, 임시 파일을 정리한다. (선택) 이슈 번호를 `issues.md`에 역링크로 남기면 추적이 쉽다.
+- **산출물**: GitHub Issues + (변경 없으면) `issues.md`.
+- **다음 단계 트리거**: 이슈 등록 완료 → walking skeleton 이슈부터 구현 시작.
+
+> **로그인 예시** — [`login/issues.md`](login/issues.md): LOGIN-1(로그인·게이트 = walking skeleton) → LOGIN-2(세션 유지) → LOGIN-3(로그아웃·표시) → LOGIN-4(실패 에러) → LOGIN-5(테스트)를 GitHub Issue #1~#5로 등록. 라벨 `feature/login`·`P0/P1`·`slice:*`를 먼저 생성 후 `--body-file`로 본문을 올림.
+>
+> ⚠️ 리모트/`gh`가 없는 환경이면 ⑤는 생략되고 `issues.md`까지가 최종 산출물이다.
+
 ---
 
 ## 핵심 원칙 요약
@@ -103,24 +125,28 @@ issues.md ────────────┘
 2. **제품 ↔ 기술 분리** — PRD(무엇/왜)와 ADR(어떻게/왜 이 선택)을 나눈다.
 3. **수직 슬라이싱** — 계층이 아니라 사용자 가치로 쪼갠다. walking skeleton 먼저.
 4. **AC ≠ DoD** — 행위는 AC(G/W/T), 품질은 DoD(체크리스트).
+5. **이슈로 등록해 인계** — 기획을 문서에만 두지 말고 ⑤에서 GitHub Issue로 올려 착수 가능한 작업으로 만든다.
 
 ## 산출물 맵
 
-이번 태그 기능이 남긴 결과물:
+이번 태그·로그인 기능이 남긴 결과물:
 
 ```
 docs/features/
 ├── feature-planning-workflow.md   ← (이 문서)
-└── tag/
-    ├── spec.md                    ① 초안 정의서
-    ├── spec-fixed.md              ② 인터뷰 확정본
-    ├── PRD.md                     ③ 제품 요구사항
-    ├── adr/                       ③ 기술 결정 기록
-    │   ├── README.md
-    │   ├── 0001-tag-data-model.md
-    │   ├── 0002-tag-normalization-policy.md
-    │   └── 0003-addnote-api-extension.md
-    └── issues.md                  ④ 수직 슬라이스 이슈
+├── tag/
+│   ├── spec.md                    ① 초안 정의서
+│   ├── spec-fixed.md              ② 인터뷰 확정본
+│   ├── PRD.md                     ③ 제품 요구사항
+│   ├── adr/                       ③ 기술 결정 기록
+│   │   ├── README.md
+│   │   ├── 0001-tag-data-model.md
+│   │   ├── 0002-tag-normalization-policy.md
+│   │   └── 0003-addnote-api-extension.md
+│   └── issues.md                  ④ 수직 슬라이스 이슈
+└── login/
+    ├── spec.md ~ adr/             ①~③ (동일 구조)
+    └── issues.md                  ④ → ⑤ GitHub Issues #1~#5로 등록
 ```
 
 ## 다음 기능에 적용하는 체크리스트
@@ -130,4 +156,5 @@ docs/features/
 - [ ] ③ `PRD.md` — 배경·목표/비목표·FR·지표·범위·리스크를 정리했다.
 - [ ] ③ `adr/` — 중요한 기술 결정마다 ADR(맥락·결정·결과·기각 대안)을 남겼다.
 - [ ] ④ `issues.md` — 수직 슬라이스로 쪼개고, 각 이슈에 AC(G/W/T) + DoD를 분리해 적었다.
+- [ ] ⑤ GitHub Issue — 사용자 확인 후 라벨을 갖춰 `gh issue create`로 각 슬라이스를 등록했다(리모트·`gh` 있을 때).
 - [ ] 구현 시작 전, 각 이슈가 독립 착수 가능할 만큼 명확하다.
