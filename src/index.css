@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --color-background: hsl(0 0% 94%);
@@ -8,6 +8,13 @@
   --color-muted-foreground: hsl(0 0% 42%);
   --color-border: hsl(0 0% 88%);
   --color-destructive: hsl(0 84% 60%);
+
+  /* 포인트 — 인디고 (디자인 시스템 colors.md). 주요 액션·활성 상태에 사용 */
+  --color-primary: hsl(243 75% 59%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-primary-hover: hsl(245 58% 51%);
+  --color-primary-subtle: hsl(243 100% 97%);
+  --color-ring: hsl(243 75% 59%);
 
   --font-sans: 'Pretendard Variable', system-ui, sans-serif;
   --font-display: 'Boogaloo', sans-serif;

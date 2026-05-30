@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { NoteItem } from './NoteItem';
 import type { Note } from '../types/note';
 
@@ -8,6 +9,7 @@ const baseNote: Note = {
   title: '제목',
   content: '내용',
   tags: [],
+  isPinned: false,
   createdAt: '2026-05-31T00:00:00.000Z',
   updatedAt: '2026-05-31T00:00:00.000Z',
 };
@@ -22,6 +24,7 @@ describe('NoteItem', () => {
         isSelected={false}
         onSelect={noop}
         onDelete={noop}
+        onTogglePin={noop}
       />,
     );
     expect(screen.getByText('회의')).toBeInTheDocument();
@@ -34,6 +37,7 @@ describe('NoteItem', () => {
         isSelected={false}
         onSelect={noop}
         onDelete={noop}
+        onTogglePin={noop}
       />,
     );
     expect(screen.queryByTestId('note-tags')).not.toBeInTheDocument();
@@ -43,14 +47,28 @@ describe('NoteItem', () => {
     const legacyNote = { ...baseNote } as Note;
     // 구버전 노트: tags 필드 자체가 없음
     delete (legacyNote as { tags?: string[] }).tags;
-    render(<NoteItem note={legacyNote} isSelected={false} onSelect={noop} onDelete={noop} />);
+    render(
+      <NoteItem
+        note={legacyNote}
+        isSelected={false}
+        onSelect={noop}
+        onDelete={noop}
+        onTogglePin={noop}
+      />,
+    );
     expect(screen.queryByTestId('note-tags')).not.toBeInTheDocument();
   });
 
   it('[경계] NoteItem — should 태그 5개를 모두 칩으로 표시한다 when note.tags에 태그가 5개 있다', () => {
     const tags = ['a', 'b', 'c', 'd', 'e'];
     render(
-      <NoteItem note={{ ...baseNote, tags }} isSelected={false} onSelect={noop} onDelete={noop} />,
+      <NoteItem
+        note={{ ...baseNote, tags }}
+        isSelected={false}
+        onSelect={noop}
+        onDelete={noop}
+        onTogglePin={noop}
+      />,
     );
     const container = screen.getByTestId('note-tags');
     expect(container).toBeInTheDocument();
@@ -59,5 +77,54 @@ describe('NoteItem', () => {
     for (const tag of tags) {
       expect(screen.getByText(tag)).toBeInTheDocument();
     }
+  });
+
+  // ── 핀 토글 버튼 (PIN-1, spec-fixed §3·§7) ──
+
+  it('[정상] NoteItem — should 핀 버튼 클릭 시 onTogglePin(id)을 호출하고 onSelect는 호출하지 않는다 (stopPropagation)', async () => {
+    const user = userEvent.setup();
+    const onTogglePin = vi.fn();
+    const onSelect = vi.fn();
+    render(
+      <NoteItem
+        note={baseNote}
+        isSelected={false}
+        onSelect={onSelect}
+        onDelete={noop}
+        onTogglePin={onTogglePin}
+      />,
+    );
+    // 미고정 노트 → "고정" aria-label
+    await user.click(screen.getByRole('button', { name: '고정' }));
+    expect(onTogglePin).toHaveBeenCalledWith('1');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('[정상] NoteItem — should 고정된 노트는 "고정 해제" aria-label 버튼을 보인다', () => {
+    render(
+      <NoteItem
+        note={{ ...baseNote, isPinned: true }}
+        isSelected={false}
+        onSelect={noop}
+        onDelete={noop}
+        onTogglePin={noop}
+      />,
+    );
+    expect(screen.getByRole('button', { name: '고정 해제' })).toBeInTheDocument();
+  });
+
+  it('[경계] NoteItem — should isPinned가 undefined면 "고정"(미고정) 버튼으로 취급한다', () => {
+    const legacy = { ...baseNote } as Note;
+    delete (legacy as { isPinned?: boolean }).isPinned;
+    render(
+      <NoteItem
+        note={legacy}
+        isSelected={false}
+        onSelect={noop}
+        onDelete={noop}
+        onTogglePin={noop}
+      />,
+    );
+    expect(screen.getByRole('button', { name: '고정' })).toBeInTheDocument();
   });
 });
