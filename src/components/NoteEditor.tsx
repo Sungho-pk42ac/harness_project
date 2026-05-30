@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNotes } from '../context/NotesContext';
 import { canAddTag } from '../lib/tag';
 import { isTrashed } from '../utils/trash';
+import { MarkdownPreview } from './MarkdownPreview';
+
+type EditorView = 'edit' | 'preview';
 
 interface NoteEditorProps {
   selectedNoteId: string | null;
@@ -16,6 +19,8 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
+  // 편집/미리보기 토글 — 편집기 로컬 화면 상태 (markdown-preview spec-fixed §2)
+  const [view, setView] = useState<EditorView>('edit');
 
   // 삭제(휴지통)된 노트는 편집기에서 가리키지 않는다 — 열려 있던 노트가 삭제되면 빈 상태로 (trash spec-fixed §4)
   const selectedNote = notes.find((n) => n.id === selectedNoteId && !isTrashed(n));
@@ -32,6 +37,7 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
       setTags([]);
     }
     setTagInput('');
+    setView('edit'); // 노트 전환/새 노트 시 항상 편집 모드로 리셋 (spec-fixed §2)
   }, [selectedNoteId, isCreating]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Enter/쉼표로 입력 텍스트를 태그 칩으로 확정한다 (정규화·검증은 canAddTag, ADR-0002)
@@ -110,14 +116,30 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
       {/* 구분선 */}
       <div className="h-px bg-border mb-4" />
 
-      {/* 내용 입력 */}
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="내용을 입력하세요..."
-        rows={14}
-        className="w-full text-base text-foreground/70 bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground/50 leading-relaxed"
-      />
+      {/* 편집/미리보기 토글 — 본문 영역만 전환 (markdown-preview spec-fixed §3) */}
+      <div className="flex justify-end mb-2">
+        <button
+          type="button"
+          aria-label={view === 'edit' ? '미리보기' : '편집'}
+          onClick={() => setView((v) => (v === 'edit' ? 'preview' : 'edit'))}
+          className="text-xs font-semibold text-muted-foreground hover:text-foreground border border-border rounded-lg px-2 py-1 transition-colors cursor-pointer"
+        >
+          {view === 'edit' ? '미리보기' : '편집'}
+        </button>
+      </div>
+
+      {/* 내용 입력 / 미리보기 — 토글에 따라 본문 영역만 전환 */}
+      {view === 'edit' ? (
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="내용을 입력하세요..."
+          rows={14}
+          className="w-full text-base text-foreground/70 bg-transparent border-none outline-none resize-none placeholder:text-muted-foreground/50 leading-relaxed"
+        />
+      ) : (
+        <MarkdownPreview content={content} />
+      )}
 
       {/* 태그 영역 */}
       <div className="mt-4">

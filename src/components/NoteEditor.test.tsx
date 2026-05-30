@@ -323,4 +323,48 @@ describe('NoteEditor', () => {
     expect(screen.queryAllByRole('button', { name: /삭제$/ })).toHaveLength(5);
     expect(screen.queryByText('f')).not.toBeInTheDocument();
   });
+
+  // ── 마크다운 미리보기 토글 (MD-1~4) ──────────────────────────────
+
+  it('[정상] NoteEditor — should 기본은 편집 모드(textarea)이고 미리보기 토글 시 렌더 결과를 보인다', async () => {
+    mockNotes = [
+      {
+        id: '1',
+        title: 't',
+        content: '# 헤딩본문',
+        tags: [],
+        isPinned: false,
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ];
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
+    // 기본 편집 모드: textarea 존재
+    expect(screen.getByPlaceholderText('내용을 입력하세요...')).toBeInTheDocument();
+    // 미리보기로 토글
+    await user.click(screen.getByRole('button', { name: '미리보기' }));
+    // textarea가 사라지고 마크다운 렌더(h1)가 보인다
+    expect(screen.queryByPlaceholderText('내용을 입력하세요...')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('헤딩본문');
+  });
+
+  it('[정상] NoteEditor — should 미리보기 모드에서도 저장이 동작한다', async () => {
+    mockNotes = [
+      {
+        id: '1',
+        title: '제목',
+        content: '# 본문',
+        tags: [],
+        isPinned: false,
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ];
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
+    await user.click(screen.getByRole('button', { name: '미리보기' }));
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    expect(editNote).toHaveBeenCalledWith('1', { title: '제목', content: '# 본문', tags: [] });
+  });
 });
