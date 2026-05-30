@@ -2,14 +2,22 @@ import { useNotes } from '../context/NotesContext';
 import { NoteItem } from './NoteItem';
 import { partitionByPinned } from '../utils/partitionByPinned';
 import { activeNotes } from '../utils/trash';
+import { sortNotes, type SortBy, type SortDir } from '../utils/sortNotes';
 import type { Note } from '../types/note';
 
 interface NoteListProps {
   selectedNoteId: string | null;
   onSelect: (id: string) => void;
+  sortBy?: SortBy;
+  sortDir?: SortDir;
 }
 
-export function NoteList({ selectedNoteId, onSelect }: NoteListProps) {
+export function NoteList({
+  selectedNoteId,
+  onSelect,
+  sortBy = 'updatedAt',
+  sortDir = 'desc',
+}: NoteListProps) {
   const { notes, loading, error, removeNote, togglePin } = useNotes();
 
   // 노트 삭제 — 실패 시 사용자에게 알림 (NoteEditor.handleSave와 동일한 에러 처리 패턴)
@@ -59,8 +67,10 @@ export function NoteList({ selectedNoteId, onSelect }: NoteListProps) {
     return <p className="text-sm text-muted-foreground text-center py-8">노트가 없습니다</p>;
   }
 
-  // 고정/일반 2섹션 분기 — 원본 불변 파생 계산 (pin spec-fixed §2·§4)
-  const { pinned, others } = partitionByPinned(active);
+  // 정렬을 먼저 적용한 뒤(원본 불변) 핀 섹션으로 분리한다 — 각 섹션이 같은 기준·방향으로 정렬됨
+  // (검색이 도입되면 filter → sort 순서로 합성; sort spec-fixed §4)
+  const sorted = sortNotes(active, sortBy, sortDir);
+  const { pinned, others } = partitionByPinned(sorted);
 
   return (
     <>
