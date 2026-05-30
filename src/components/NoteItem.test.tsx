@@ -127,4 +127,24 @@ describe('NoteItem', () => {
     );
     expect(screen.getByRole('button', { name: '고정' })).toBeInTheDocument();
   });
+
+  // ── 복제 버튼 (DUPLICATE-1, spec-fixed §2) ──
+  it('[정상] NoteItem — should 복제 버튼 클릭 시 onDuplicate(id)를 호출하고 onSelect는 호출하지 않는다', async () => {
+    const user = userEvent.setup();
+    const onDuplicate = vi.fn();
+    const onSelect = vi.fn();
+    render(
+      <NoteItem
+        note={baseNote}
+        isSelected={false}
+        onSelect={onSelect}
+        onDelete={noop}
+        onTogglePin={noop}
+        onDuplicate={onDuplicate}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: '복제' }));
+    expect(onDuplicate).toHaveBeenCalledWith('1');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
 });

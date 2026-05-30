@@ -6,9 +6,17 @@ interface NoteItemProps {
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onTogglePin: (id: string) => void;
+  onDuplicate?: (id: string) => void;
 }
 
-export function NoteItem({ note, isSelected, onSelect, onDelete, onTogglePin }: NoteItemProps) {
+export function NoteItem({
+  note,
+  isSelected,
+  onSelect,
+  onDelete,
+  onTogglePin,
+  onDuplicate,
+}: NoteItemProps) {
   // 구버전 노트(isPinned 없음) 방어 (pin ADR-0001)
   const isPinned = note.isPinned ?? false;
 
@@ -38,6 +46,17 @@ export function NoteItem({ note, isSelected, onSelect, onDelete, onTogglePin }: 
             }`}
           >
             {isPinned ? '★' : '☆'}
+          </button>
+          {/* 복제 — 카드 선택과 분리(stopPropagation) */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate?.(note.id);
+            }}
+            className="text-muted-foreground hover:text-foreground text-xs transition-colors cursor-pointer"
+          >
+            복제
           </button>
           <button
             onClick={(e) => {

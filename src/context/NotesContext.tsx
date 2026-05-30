@@ -1,13 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Note } from '../types/note';
 import * as api from '../api/notes';
+import { buildDuplicatePayload } from '../lib/duplicate';
 
 interface NotesContextType {
   notes: Note[];
   loading: boolean;
   error: string | null;
-  // 확정 시그니처(issue-6): tags 인자 추가
-  addNote: (title: string, content: string, tags: string[]) => Promise<void>;
+  // 확정 시그니처(issue-6): tags 인자 추가. 복제(duplicate ADR-0001)를 위해 생성 노트를 반환
+  addNote: (title: string, content: string, tags: string[]) => Promise<Note>;
   editNote: (id: string, updates: Partial<Note>) => Promise<void>;
   // 소프트 삭제(trash ADR-0001): deletedAt을 채워 휴지통으로 보낸다(제거 아님)
   removeNote: (id: string) => Promise<void>;
@@ -17,6 +18,8 @@ interface NotesContextType {
   restoreNote: (id: string) => Promise<void>;
   // 영구 삭제: DB에서 실제 제거(되돌릴 수 없음)
   purgeNote: (id: string) => Promise<void>;
+  // 복제: 원본의 (사본) 페이로드로 새 노트를 생성해 반환 (duplicate ADR-0002)
+  duplicateNote: (id: string) => Promise<Note>;
 }
 
 const NotesContext = createContext<NotesContextType | null>(null);
@@ -39,6 +42,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const addNote = async (title: string, content: string, tags: string[]) => {
     const created = await api.createNote({ title, content, tags, isPinned: false });
     setNotes((prev) => [...prev, created]);
+    return created; // 복제 등에서 새 노트 id가 필요하므로 생성 노트를 반환 (duplicate ADR-0001)
   };
 
   // 수정: api 응답으로 받은 노트로 해당 항목을 교체 (자체 catch 없이 호출부로 전파)
@@ -65,6 +69,14 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
 
+  // 복제: 원본을 찾아 (사본) 페이로드로 새 노트를 생성하고 그 노트를 반환한다
+  const duplicateNote = async (id: string) => {
+    const original = notes.find((n) => n.id === id);
+    if (!original) throw new Error('복제할 노트를 찾을 수 없습니다');
+    const { title, content, tags } = buildDuplicatePayload(original);
+    return addNote(title, content, tags);
+  };
+
   // 핀 토글: 현재 노트의 isPinned를 뒤집어 updateNote로 영속화, 응답으로 로컬 교체 (editNote와 동일 패턴)
   const togglePin = async (id: string) => {
     const current = notes.find((n) => n.id === id);
@@ -85,6 +97,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         togglePin,
         restoreNote,
         purgeNote,
+        duplicateNote,
       }}
     >
       {children}
