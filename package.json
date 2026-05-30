@@ -13,11 +13,20 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{ts,tsx}": [
+    "*.tsx": [
+      "eslint --fix",
+      "prettier --write",
+      "node scripts/check-design-system.mjs"
+    ],
+    "*.ts": [
       "eslint --fix",
       "prettier --write"
     ],
-    "*.{json,css,md}": [
+    "*.css": [
+      "prettier --write",
+      "node scripts/check-design-system.mjs"
+    ],
+    "*.{json,md}": [
       "prettier --write"
     ]
   },
