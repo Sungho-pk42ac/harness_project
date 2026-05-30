@@ -32,7 +32,9 @@ test.describe('노트 태그 (PRD tag)', () => {
     await page.getByText(title, { exact: true }).click();
 
     // 편집 화면에 태그 칩이 영속되어 다시 보인다 (FR-8·9)
-    await expect(page.getByText('회의', { exact: true })).toBeVisible();
+    // (TAG-4로 목록 카드에도 '회의' 칩이 생겨 텍스트가 2곳에 매칭되므로, 편집기 전용
+    //  요소인 칩 삭제 버튼으로 특정해 편집기 내 영속을 검증한다)
+    await expect(page.getByRole('button', { name: '회의 삭제' })).toBeVisible();
   });
 
   test('[J2] 쉼표(,)로도 태그가 칩으로 추가된다 (U1, FR-1)', async ({ page }) => {
