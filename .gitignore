@@ -42,3 +42,9 @@ vite.config.d.ts
 
 # Claude Code 에이전트 로컬 메모리 (공유 대상 아님)
 .claude/agent-memory/
+
+# Playwright E2E 산출물 / 격리 DB (시드는 e2e/seed.mjs로 생성)
+db.e2e.json
+/test-results/
+/playwright-report/
+/playwright/.cache/
