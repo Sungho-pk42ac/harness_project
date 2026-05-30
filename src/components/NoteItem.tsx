@@ -12,9 +12,7 @@ export function NoteItem({ note, isSelected, onSelect, onDelete }: NoteItemProps
     <div
       onClick={() => onSelect(note.id)}
       className={`bg-card rounded-2xl p-4 border cursor-pointer transition-all ${
-        isSelected
-          ? 'border-foreground shadow-[0_2px_12px_rgba(0,0,0,0.12)]'
-          : 'border-border hover:shadow-[0_2px_8px_rgba(0,0,0,0.07)]'
+        isSelected ? 'border-foreground shadow-lg' : 'border-border hover:shadow-md'
       }`}
     >
       <div className="flex items-start justify-between gap-2">
@@ -34,6 +32,19 @@ export function NoteItem({ note, isSelected, onSelect, onDelete }: NoteItemProps
       <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
         {note.content || '(내용 없음)'}
       </p>
+      {/* 태그 칩 — 있을 때만 표시, 많으면 flex-wrap으로 줄바꿈 (note.tags ?? [] 구버전 방어, ADR-0001) */}
+      {(note.tags ?? []).length > 0 && (
+        <div data-testid="note-tags" className="flex flex-wrap gap-1 mt-2">
+          {(note.tags ?? []).map((tag, i) => (
+            <span
+              key={`${tag}-${i}`}
+              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
       <p className="text-[10px] text-muted-foreground/70 mt-2">
         {new Date(note.updatedAt).toLocaleDateString('ko-KR')}
       </p>
