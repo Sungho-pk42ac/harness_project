@@ -7,6 +7,14 @@ import { dirname, resolve } from 'node:path';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const seed = {
+  // 로그인 게이트(LOGIN-1~5) 통과용 시드 계정 — spec-fixed §1 규약(test@test.com / 1234)
+  users: [
+    {
+      id: 'u1',
+      email: 'test@test.com',
+      password: '1234',
+    },
+  ],
   notes: [
     // tags 필드가 없는 구버전 노트 — 호환성(ADR-0001, note.tags ?? []) 확인용 시드
     {
