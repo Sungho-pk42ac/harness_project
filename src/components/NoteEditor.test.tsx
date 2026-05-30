@@ -19,6 +19,11 @@ vi.mock('../context/NotesContext', () => ({
   }),
 }));
 
+// 다운로드 부수효과는 모킹해 호출·인자만 검증한다 (EXPORT)
+vi.mock('../lib/download', () => ({ downloadTextFile: vi.fn() }));
+import { downloadTextFile } from '../lib/download';
+const mockedDownload = vi.mocked(downloadTextFile);
+
 describe('NoteEditor', () => {
   beforeEach(() => {
     addNote.mockClear();
@@ -366,5 +371,35 @@ describe('NoteEditor', () => {
     await user.click(screen.getByRole('button', { name: '미리보기' }));
     await user.click(screen.getByRole('button', { name: '저장' }));
     expect(editNote).toHaveBeenCalledWith('1', { title: '제목', content: '# 본문', tags: [] });
+  });
+
+  // ── 내보내기(.md) (EXPORT-1·3) ──────────────────────────────────
+  it('[정상] NoteEditor — should 내보내기 클릭 시 .md 파일명과 마크다운으로 downloadTextFile을 호출한다', async () => {
+    mockedDownload.mockClear();
+    mockNotes = [
+      {
+        id: '1',
+        title: '회의록',
+        content: '본문',
+        tags: ['업무'],
+        isPinned: false,
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ];
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
+    await user.click(screen.getByRole('button', { name: '내보내기' }));
+    expect(mockedDownload).toHaveBeenCalledTimes(1);
+    const [filename, text, mime] = mockedDownload.mock.calls[0];
+    expect(filename).toMatch(/^회의록-\d{4}-\d{2}-\d{2}\.md$/);
+    expect(text).toContain('# 회의록');
+    expect(text).toContain('태그: 업무');
+    expect(mime).toBe('text/markdown');
+  });
+
+  it('[경계] NoteEditor — should 미저장 새 노트(isCreating)에서는 내보내기 버튼이 없다', () => {
+    render(<NoteEditor selectedNoteId={null} isCreating={true} onDone={() => {}} />);
+    expect(screen.queryByRole('button', { name: '내보내기' })).not.toBeInTheDocument();
   });
 });
