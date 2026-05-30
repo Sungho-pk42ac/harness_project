@@ -31,3 +31,14 @@ dist-ssr/
 
 # Claude Code 로컬 개인 설정 (공유 설정 .claude/settings.json은 추적)
 .claude/settings.local.json
+
+# 테스트 커버리지 산출물
+coverage/
+
+# TS 증분 빌드 정보 / 생성된 vite 설정 산출물
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Claude Code 에이전트 로컬 메모리 (공유 대상 아님)
+.claude/agent-memory/
