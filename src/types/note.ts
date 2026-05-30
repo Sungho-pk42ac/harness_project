@@ -4,5 +4,5 @@ export interface Note {
   content: string;
   createdAt: string;
   updatedAt: string;
-  tags: string[]; // 신규. 기본값 [] (RED 단계: 타입만 추가, 동작 미구현)
+  tags: string[]; // 기본값 []. 읽기 시 note.tags ?? [] 로 구버전 노트 방어 (ADR-0001)
 }
