@@ -5,9 +5,12 @@ interface LayoutProps {
   onNewNote: () => void;
   sidebar: ReactNode;
   main: ReactNode;
+  // 휴지통/노트 화면 전환 (trash spec-fixed §3-2)
+  view: 'notes' | 'trash';
+  onToggleView: () => void;
 }
 
-export function Layout({ onNewNote, sidebar, main }: LayoutProps) {
+export function Layout({ onNewNote, sidebar, main, view, onToggleView }: LayoutProps) {
   const { user, logout } = useAuth();
 
   return (
@@ -20,6 +23,13 @@ export function Layout({ onNewNote, sidebar, main }: LayoutProps) {
         <div className="flex items-center gap-3">
           {/* 현재 사용자 이메일 */}
           {user && <span className="text-sm text-muted-foreground">{user.email}</span>}
+          {/* 휴지통 토글 — 노트/휴지통 화면 전환 */}
+          <button
+            onClick={onToggleView}
+            className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          >
+            {view === 'trash' ? '노트로 돌아가기' : '휴지통'}
+          </button>
           <button
             onClick={onNewNote}
             className="bg-foreground text-card px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-75 transition-opacity cursor-pointer"

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNotes } from '../context/NotesContext';
 import { canAddTag } from '../lib/tag';
+import { isTrashed } from '../utils/trash';
 
 interface NoteEditorProps {
   selectedNoteId: string | null;
@@ -16,7 +17,8 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const selectedNote = notes.find((n) => n.id === selectedNoteId);
+  // 삭제(휴지통)된 노트는 편집기에서 가리키지 않는다 — 열려 있던 노트가 삭제되면 빈 상태로 (trash spec-fixed §4)
+  const selectedNote = notes.find((n) => n.id === selectedNoteId && !isTrashed(n));
 
   // 선택된 노트가 바뀔 때 폼 동기화
   useEffect(() => {
@@ -77,8 +79,8 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
     }
   };
 
-  // 아무것도 선택 안 된 상태
-  if (!isCreating && !selectedNoteId) {
+  // 아무것도 선택 안 됐거나, 선택한 노트가 삭제(휴지통)된 상태
+  if (!isCreating && !selectedNote) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-3">

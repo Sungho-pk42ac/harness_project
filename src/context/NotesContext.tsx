@@ -9,9 +9,14 @@ interface NotesContextType {
   // 확정 시그니처(issue-6): tags 인자 추가
   addNote: (title: string, content: string, tags: string[]) => Promise<void>;
   editNote: (id: string, updates: Partial<Note>) => Promise<void>;
+  // 소프트 삭제(trash ADR-0001): deletedAt을 채워 휴지통으로 보낸다(제거 아님)
   removeNote: (id: string) => Promise<void>;
   // 핀 토글(pin ADR-0003): 현재 isPinned를 뒤집어 영속화 후 로컬 배열 교체
   togglePin: (id: string) => Promise<void>;
+  // 복원: deletedAt을 비워 활성 목록으로 되돌린다
+  restoreNote: (id: string) => Promise<void>;
+  // 영구 삭제: DB에서 실제 제거(되돌릴 수 없음)
+  purgeNote: (id: string) => Promise<void>;
 }
 
 const NotesContext = createContext<NotesContextType | null>(null);
@@ -42,7 +47,20 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)));
   };
 
+  // 삭제 = 소프트 삭제: deletedAt을 채워 영속화하고, 응답 노트로 교체(제거하지 않음 — 휴지통에 남아야 함)
   const removeNote = async (id: string) => {
+    const updated = await api.updateNote(id, { deletedAt: new Date().toISOString() });
+    setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)));
+  };
+
+  // 복원: deletedAt을 비워(null) 활성 목록으로 되돌리고 응답으로 교체
+  const restoreNote = async (id: string) => {
+    const updated = await api.updateNote(id, { deletedAt: null });
+    setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)));
+  };
+
+  // 영구 삭제: DB에서 실제 제거 후 로컬에서도 제거(filter)
+  const purgeNote = async (id: string) => {
     await api.deleteNote(id);
     setNotes((prev) => prev.filter((n) => n.id !== id));
   };
@@ -57,7 +75,17 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   return (
     <NotesContext.Provider
-      value={{ notes, loading, error, addNote, editNote, removeNote, togglePin }}
+      value={{
+        notes,
+        loading,
+        error,
+        addNote,
+        editNote,
+        removeNote,
+        togglePin,
+        restoreNote,
+        purgeNote,
+      }}
     >
       {children}
     </NotesContext.Provider>
