@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNotes } from '../context/NotesContext';
+import { canAddTag } from '../lib/tag';
 
 interface NoteEditorProps {
   selectedNoteId: string | null;
@@ -31,12 +32,21 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
     setTagInput('');
   }, [selectedNoteId, isCreating]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Enter/쉼표로 입력 텍스트를 태그 칩으로 확정한다
+  // Enter/쉼표로 입력 텍스트를 태그 칩으로 확정한다 (정규화·검증은 canAddTag, ADR-0002)
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      setTags((prev) => [...prev, tagInput]);
-      setTagInput('');
+      const result = canAddTag(tags, tagInput);
+      if (result.ok) {
+        setTags((prev) => [...prev, result.value]);
+        setTagInput('');
+      } else if (result.reason === 'duplicate') {
+        // 중복은 사용자에게 명시적으로 안내 (ADR-0002)
+        alert('이미 있는 태그입니다');
+      } else {
+        // 빈값(empty)·개수상한(max)은 조용히 무시
+        setTagInput('');
+      }
     }
   };
 

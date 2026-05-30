@@ -70,11 +70,12 @@ describe('NoteEditor', () => {
     const user = userEvent.setup();
     render(<NoteEditor selectedNoteId={null} isCreating={true} onDone={() => {}} />);
     await user.type(screen.getByPlaceholderText('제목'), '제목');
-    await user.type(screen.getByPlaceholderText('태그 입력'), 'tagA{Enter}');
+    // 정규화(ADR-0002, TAG-3)와 무관하도록 이미 정규화된 값을 입력
+    await user.type(screen.getByPlaceholderText('태그 입력'), 'taga{Enter}');
     // Act
     await user.click(screen.getByRole('button', { name: '저장' }));
     // Assert
-    expect(addNote).toHaveBeenCalledWith('제목', '', ['tagA']);
+    expect(addNote).toHaveBeenCalledWith('제목', '', ['taga']);
   });
 
   it('[정상] NoteEditor — should editNote(id, { title, content, tags })를 호출한다 when 기존 노트를 저장한다', async () => {
@@ -238,5 +239,65 @@ describe('NoteEditor', () => {
     await user.keyboard('{Enter}');
     // Assert
     expect(screen.queryByText('회의')).not.toBeInTheDocument();
+  });
+
+  // ── TAG-3 (이슈 #8): 태그 정규화·검증 ────────────────────────────
+
+  it('[정상] NoteEditor — should 정규화된 태그가 추가된다 when "  Work  " 입력 후 Enter', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId={null} isCreating={true} onDone={() => {}} />);
+    // Act: 앞뒤 공백 + 대문자 입력
+    await user.type(screen.getByPlaceholderText('태그 입력'), '  Work  {Enter}');
+    // Assert: "work"로 정규화되어 표시
+    expect(screen.getByText('work')).toBeInTheDocument();
+  });
+
+  it('[경계] NoteEditor — should 아무 태그도 추가되지 않는다 when 공백만 입력 후 Enter', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId={null} isCreating={true} onDone={() => {}} />);
+    // Act: 공백만 입력
+    await user.type(screen.getByPlaceholderText('태그 입력'), '   {Enter}');
+    // Assert: 삭제 버튼(=칩)이 하나도 없다
+    expect(screen.queryAllByRole('button', { name: /삭제$/ })).toHaveLength(0);
+  });
+
+  it('[예외] NoteEditor — should 추가되지 않고 "이미 있는 태그" 알림이 뜬다 when 기존 "work"에 "Work"를 입력 후 Enter', async () => {
+    // Arrange: "work"를 가진 노트
+    mockNotes = [
+      { id: '1', title: 't', content: 'c', tags: ['work'], createdAt: 'now', updatedAt: 'now' },
+    ];
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
+    // Act: 대소문자만 다른 중복 입력
+    await user.type(screen.getByPlaceholderText('태그 입력'), 'Work{Enter}');
+    // Assert: 알림이 뜨고, "work" 칩은 여전히 1개
+    expect(alertSpy).toHaveBeenCalledWith('이미 있는 태그입니다');
+    expect(screen.getAllByText('work')).toHaveLength(1);
+    alertSpy.mockRestore();
+  });
+
+  it('[경계] NoteEditor — should 6번째 태그가 추가되지 않는다 when 이미 태그가 5개다', async () => {
+    // Arrange: 태그 5개
+    mockNotes = [
+      {
+        id: '1',
+        title: 't',
+        content: 'c',
+        tags: ['a', 'b', 'c', 'd', 'e'],
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ];
+    const user = userEvent.setup();
+    render(<NoteEditor selectedNoteId="1" isCreating={false} onDone={() => {}} />);
+    expect(screen.queryAllByRole('button', { name: /삭제$/ })).toHaveLength(5);
+    // Act: 6번째 추가 시도
+    await user.type(screen.getByPlaceholderText('태그 입력'), 'f{Enter}');
+    // Assert: 여전히 5개
+    expect(screen.queryAllByRole('button', { name: /삭제$/ })).toHaveLength(5);
+    expect(screen.queryByText('f')).not.toBeInTheDocument();
   });
 });
