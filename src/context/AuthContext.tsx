@@ -39,8 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loggedIn));
   };
 
-  // 로그아웃 — 메모리 상태 해제 (localStorage 정리는 LOGIN-3)
-  const logout = () => setUser(null);
+  // 로그아웃 — 메모리 상태 해제 + localStorage 세션 제거(자동 재로그인 방지)
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem(STORAGE_KEY);
+  };
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>

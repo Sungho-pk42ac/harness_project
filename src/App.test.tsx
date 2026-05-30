@@ -89,3 +89,40 @@ describe('App (세션 유지)', () => {
     expect(screen.queryByPlaceholderText('이메일')).not.toBeInTheDocument();
   });
 });
+
+describe('App (로그아웃·사용자 표시)', () => {
+  beforeEach(() => {
+    vi.mocked(notesApi.fetchNotes).mockResolvedValue([]);
+    localStorage.clear();
+  });
+
+  it('[정상] App — should 로그인 화면으로 돌아간다 when 로그인 상태에서 헤더의 로그아웃 버튼을 누른다', async () => {
+    localStorage.setItem('auth.user', JSON.stringify(seededUser));
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole('button', { name: '+ 새 노트' });
+    // Act: 로그아웃
+    await user.click(screen.getByRole('button', { name: '로그아웃' }));
+    // Assert: 로그인 화면 복귀
+    expect(await screen.findByPlaceholderText('이메일')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ 새 노트' })).not.toBeInTheDocument();
+  });
+
+  it('[정상] App — should localStorage 세션이 제거된다 when 로그아웃한다', async () => {
+    localStorage.setItem('auth.user', JSON.stringify(seededUser));
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole('button', { name: '+ 새 노트' });
+    await user.click(screen.getByRole('button', { name: '로그아웃' }));
+    // Assert: 세션 제거 → 자동 재로그인 불가
+    expect(localStorage.getItem('auth.user')).toBeNull();
+  });
+
+  it('[정상] Layout — should 헤더에 현재 사용자 이메일이 표시된다 when test@test.com으로 로그인돼 있다', async () => {
+    localStorage.setItem('auth.user', JSON.stringify(seededUser));
+    render(<App />);
+    await screen.findByRole('button', { name: '+ 새 노트' });
+    // Assert: 헤더에 이메일 표시
+    expect(screen.getByText('test@test.com')).toBeInTheDocument();
+  });
+});
