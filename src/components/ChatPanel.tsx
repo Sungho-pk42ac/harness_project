@@ -2,11 +2,20 @@ import { useState, type KeyboardEvent } from 'react';
 import { makeMessage, appendMessage } from '../lib/agent/messages';
 import type { ChatMessage } from '../lib/agent/types';
 
+/** 삭제 확인 카드 요청 (ADR-0004). 설정되면 패널 하단에 확인/취소 카드를 띄운다. */
+export interface PendingConfirm {
+  title: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
 interface ChatPanelProps {
   open: boolean;
   onClose: () => void;
-  // 주입 경계 — 사용자 입력을 받아 어시스턴트 응답 텍스트를 돌려준다(NAA-3에서 runAgent로 교체)
+  // 주입 경계 — 사용자 입력을 받아 어시스턴트 응답 텍스트를 돌려준다(runAgent 연결)
   onSend: (text: string) => Promise<string>;
+  // 삭제 등 확인이 필요한 동작이 대기 중일 때의 확인 카드(없으면 미표시)
+  pendingConfirm?: PendingConfirm | null;
 }
 
 /**
@@ -14,7 +23,7 @@ interface ChatPanelProps {
  * 입력→전송 시 사용자 메시지를 표시하고 주입된 onSend의 응답을 어시스턴트 메시지로 렌더한다.
  * 에이전트/도구 연결은 후속 슬라이스(NAA-2·3)에서 더한다.
  */
-export function ChatPanel({ open, onClose, onSend }: ChatPanelProps) {
+export function ChatPanel({ open, onClose, onSend, pendingConfirm }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -99,6 +108,34 @@ export function ChatPanel({ open, onClose, onSend }: ChatPanelProps) {
           </div>
         )}
       </div>
+
+      {/* 삭제 확인 카드 (ADR-0004) */}
+      {pendingConfirm && (
+        <div
+          className="border-t border-border bg-muted/40 p-3"
+          role="alertdialog"
+          aria-label="삭제 확인"
+        >
+          <p className="text-sm text-foreground">
+            노트 <span className="font-semibold">{pendingConfirm.title}</span>을(를) 휴지통으로
+            보낼까요? 휴지통에서 복구할 수 있어요.
+          </p>
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              onClick={pendingConfirm.onCancel}
+              className="px-3 py-1.5 rounded-lg text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              취소
+            </button>
+            <button
+              onClick={pendingConfirm.onConfirm}
+              className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-destructive text-primary-foreground hover:opacity-90 transition-opacity cursor-pointer"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 입력 */}
       <div className="border-t border-border p-3 flex items-end gap-2">

@@ -58,4 +58,29 @@ describe('ChatPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: '닫기' }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('should 삭제 확인 카드를 띄우고 버튼이 콜백을 호출한다 when pendingConfirm', () => {
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
+    const { rerender } = render(
+      <ChatPanel open onClose={noop} onSend={async () => ''} pendingConfirm={null} />,
+    );
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+    rerender(
+      <ChatPanel
+        open
+        onClose={noop}
+        onSend={async () => ''}
+        pendingConfirm={{ title: '회의록', onConfirm, onCancel }}
+      />,
+    );
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.getByText('회의록')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '확인' }));
+    expect(onConfirm).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: '취소' }));
+    expect(onCancel).toHaveBeenCalled();
+  });
 });

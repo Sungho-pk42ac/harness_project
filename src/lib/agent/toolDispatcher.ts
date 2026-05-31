@@ -11,6 +11,8 @@ export interface ToolDeps {
   removeNote: (id: string) => Promise<void>;
   getNotes: () => Note[]; // 활성 노트 스냅샷
   searchNotes: (query: string) => Note[]; // filterNotes 위임
+  // 삭제 실행 전 사용자 확인 (ADR-0004). 미주입 시(테스트 등) 확인 없이 진행하지 않고 차단한다.
+  confirmDelete?: (id: string) => Promise<boolean>;
 }
 
 const ok = (toolCallId: string, data: unknown): ToolResult => ({ toolCallId, ok: true, data });
@@ -52,6 +54,11 @@ export async function dispatchTool(call: ToolCall, deps: ToolDeps): Promise<Tool
       case 'deleteNote': {
         const noteId = asString(args.id);
         if (!noteId) return err(id, 'id가 필요합니다');
+        // 확인 게이트(ADR-0004) — 콜백이 없거나 사용자가 취소하면 삭제하지 않는다.
+        const approved = deps.confirmDelete ? await deps.confirmDelete(noteId) : false;
+        if (!approved) {
+          return ok(id, { id: noteId, deleted: false, cancelled: true });
+        }
         await deps.removeNote(noteId);
         return ok(id, { id: noteId, deleted: true });
       }
