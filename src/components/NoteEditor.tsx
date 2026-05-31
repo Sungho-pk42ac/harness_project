@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNotes } from '../context/NotesContext';
+import { debounce, type Debounced } from '../utils/debounce';
 import { canAddTag } from '../lib/tag';
 import { isTrashed } from '../utils/trash';
 import { MarkdownPreview } from './MarkdownPreview';
@@ -21,6 +22,8 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
+  // 자동저장 상태 표시 (auto-save spec-fixed §3)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   // 편집/미리보기 토글 — 편집기 로컬 화면 상태 (markdown-preview spec-fixed §2)
   const [view, setView] = useState<EditorView>('edit');
 
@@ -40,7 +43,45 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
     }
     setTagInput('');
     setView('edit'); // 노트 전환/새 노트 시 항상 편집 모드로 리셋 (spec-fixed §2)
+    setSaveStatus('idle'); // 노트 전환 시 자동저장 상태 초기화
   }, [selectedNoteId, isCreating]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // editNote 최신 참조(디바운스 클로저 staleness 방지)
+  const editNoteRef = useRef(editNote);
+  editNoteRef.current = editNote;
+
+  // 안정적인 디바운스 자동저장기(1회 생성). (id, payload)를 인자로 저장하므로, 노트 전환 시 flush해도
+  // "예약 시점의 이전 노트" 값이 저장된다(손실 방지) (auto-save spec-fixed §2·§3).
+  const autosaveRef = useRef<Debounced<
+    [string, { title: string; content: string; tags: string[] }]
+  > | null>(null);
+  if (!autosaveRef.current) {
+    autosaveRef.current = debounce((noteId, payload) => {
+      setSaveStatus('saving');
+      editNoteRef.current(noteId, payload).then(
+        () => setSaveStatus('saved'),
+        () => setSaveStatus('idle'),
+      );
+    }, 800);
+  }
+
+  // 기존 노트 편집 중 더티 변경이 생기면 디바운스 자동저장 예약. 신규 노트·빈 제목은 보류.
+  useEffect(() => {
+    if (isCreating || !selectedNote || !selectedNoteId) return;
+    const dirty =
+      title !== selectedNote.title ||
+      content !== selectedNote.content ||
+      JSON.stringify(tags) !== JSON.stringify(selectedNote.tags ?? []);
+    if (dirty && title.trim()) {
+      autosaveRef.current?.(selectedNoteId, { title, content, tags });
+    }
+  }, [title, content, tags, selectedNote, selectedNoteId, isCreating]);
+
+  // 노트 전환·언마운트 시 대기 중 자동저장을 flush(이전 노트의 미저장 편집 손실 방지).
+  useEffect(() => {
+    const autosave = autosaveRef.current;
+    return () => autosave?.flush();
+  }, [selectedNoteId]);
 
   // Enter/쉼표로 입력 텍스트를 태그 칩으로 확정한다 (정규화·검증은 canAddTag, ADR-0002)
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -114,10 +155,17 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
 
   return (
     <div className="bg-card rounded-3xl px-8 sm:px-12 py-8 shadow-md border border-border max-w-2xl">
-      {/* 섹션 라벨 */}
-      <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-6">
-        {isCreating ? '새 노트' : '노트 편집'}
-      </p>
+      {/* 섹션 라벨 + 자동저장 상태(기존 노트 편집 시) */}
+      <div className="flex items-center justify-between mb-6">
+        <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">
+          {isCreating ? '새 노트' : '노트 편집'}
+        </p>
+        {!isCreating && selectedNote && saveStatus !== 'idle' && (
+          <span className="text-xs text-muted-foreground" role="status">
+            {saveStatus === 'saving' ? '저장 중…' : '저장됨'}
+          </span>
+        )}
+      </div>
 
       {/* 제목 입력 */}
       <input
