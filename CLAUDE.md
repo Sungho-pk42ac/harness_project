@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 React 19 + TypeScript + Vite 기반의 **노트 CRUD 앱 실습 프로젝트**입니다.
 강의용 코드베이스로, 아래 TDD 워크플로(수직 슬라이스)를 따라 기능을 한 이슈씩 쌓아 왔습니다.
-지금까지 구현된 기능: **태그 · 로그인/인증 · 휴지통(소프트 삭제) · 핀 고정 · 정렬 · 통합 검색 ·
-마크다운 미리보기 · 노트 복제 · 내보내기(.md)/백업(.json)**. 각 기능은 `docs/features/<기능>/`에
+지금까지 구현된 기능: **태그 · 로그인/회원가입(Supabase Auth) · 휴지통(소프트 삭제) · 핀 고정 · 정렬 ·
+통합 검색 · 마크다운 미리보기 · 노트 복제 · 내보내기(.md)/백업(.json) · 자동저장**. 백엔드는 **Supabase**
+(Postgres + Auth + RLS)이고 **Vercel**로 배포합니다. 각 기능은 `docs/features/<기능>/`에
 spec → spec-fixed → PRD → ADR → issues 순으로 설계 문서를 남깁니다 (새 기능도 이 구조를 따르세요).
 
 ## 새 이슈 작업 사이클 (TDD 워크플로) — 반드시 준수
@@ -39,49 +40,70 @@ spec → spec-fixed → PRD → ADR → issues 순으로 설계 문서를 남깁
 
 ## 명령어
 
-| 명령어               | 설명                                                           |
-| -------------------- | -------------------------------------------------------------- |
-| `npm run dev`        | Vite(5173) + JSON Server(3001) **동시 실행** (concurrently)    |
-| `npm run server`     | JSON Server만 실행 — 프론트 없이 API만 띄울 때                 |
-| `npm run build`      | `tsc` 타입체크 후 Vite 프로덕션 빌드                           |
-| `npm run lint`       | ESLint 검사 (`--fix` 자동 적용됨)                              |
-| `npm run format`     | Prettier 전체 포맷                                             |
-| `npm test`           | Vitest 1회 실행 (단위·컴포넌트)                                |
-| `npm run test:watch` | Vitest watch 모드                                              |
-| `npm run e2e`        | Playwright E2E 실행                                            |
-| `npm run dev:e2e`    | E2E용 서버 — `db.e2e.json`을 seed로 초기화 후 vite+json-server |
+| 명령어               | 설명                                                                       |
+| -------------------- | -------------------------------------------------------------------------- |
+| `npm run dev`        | Vite 개발 서버(5173) 실행. **데이터는 원격 Supabase** — 로컬 API 서버 없음 |
+| `npm run build`      | `tsc` 타입체크 후 Vite 프로덕션 빌드                                       |
+| `npm run lint`       | ESLint 검사 (`--fix` 자동 적용됨)                                          |
+| `npm run format`     | Prettier 전체 포맷                                                         |
+| `npm test`           | Vitest 1회 실행 (단위·컴포넌트)                                            |
+| `npm run test:watch` | Vitest watch 모드                                                          |
+| `npm run e2e`        | Playwright E2E 실행                                                        |
+| `npm run dev:e2e`    | E2E용 서버 — `e2e/seed.mjs`로 Supabase 테스트 계정을 준비 후 vite 실행     |
 
 - 단일 단위 테스트 실행: `npx vitest run src/components/NoteEditor.test.tsx`
   또는 이름으로 필터링 `npx vitest run -t "저장"`
 - 단일 E2E 실행: `npx playwright test e2e/tag.spec.ts`
 - **테스트 배치**: 단위·컴포넌트 테스트는 소스 옆에 co-locate(`*.test.{ts,tsx}`), Vitest는 `src/`만
   수집(globals + jsdom + `src/test-setup.ts`). **E2E는 `e2e/`의 Playwright**로 분리되며 Vitest가
-  수집하지 않습니다. E2E는 dev DB와 격리된 `db.e2e.json`을 매 실행 전 `e2e/seed.mjs`로 새로 초기화하고,
-  단일 json-server를 공유하므로 **직렬 실행**(`workers: 1`)합니다.
+  수집하지 않습니다. E2E는 매 실행 전 `e2e/seed.mjs`(service_role 키로 RLS 우회)가 **데모 계정
+  `test@test.com` / `1234`**를 준비하고(이미 있으면 무시), 원격 Supabase를 공유하므로 **직렬
+  실행**(`workers: 1`)합니다. _(주의: `playwright.config.ts` 주석은 아직 json-server/`db.e2e.json`을
+  언급하지만 실제로는 Supabase 시드만 돌립니다 — 주석이 stale.)_
+
+## 환경변수 / 배포
+
+- **`.env`**(git 무시, `.env.example` 참고)에 `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`가 있어야
+  앱이 동작합니다. 둘 중 하나라도 비면 `getSupabase()`가 명확한 에러를 throw합니다.
+- **E2E 시드 전용**(로컬/CI에서만, 절대 커밋 금지): `SUPABASE_SERVICE_ROLE_KEY` — `e2e/seed.mjs`가 RLS를
+  우회해 데모 계정을 만들 때 사용. 없으면 시드가 실패 종료합니다.
+- **배포는 Vercel**(`vercel.json`: framework `vite`, SPA rewrite). 같은 `VITE_*` 변수를 Vercel 프로젝트
+  환경변수에 등록해야 합니다. 자세한 내용은 `docs/features/vercel-deploy-config/`.
 
 ## 아키텍처
 
 > 의존성 다이어그램: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (브라우저용: `docs/architecture/index.html`)
 
-데이터는 **JSON Server**(`db.json`)가 `http://localhost:3001`로 제공하는 REST API(`/notes`, `/users`)에서
-옵니다. 프론트엔드는 단방향으로 흐릅니다:
+데이터는 **Supabase**(Postgres + Auth)에서 옵니다. `notes` 테이블은 **RLS**로 보호되어 각 사용자가
+자신의 노트(`user_id = auth.uid()`)만 읽고 씁니다. 인증은 Supabase Auth(이메일/비밀번호)입니다.
+프론트엔드는 단방향으로 흐릅니다:
 
 ```
-db.json ─ JSON Server ─ src/api/{notes,auth}.ts ─ {Notes,Auth}Context ─ 컴포넌트
-                                                  └ src/lib, src/utils (순수 함수)
+Supabase(Postgres+Auth) ─ src/api/supabaseClient.ts ─ src/api/{notes,auth}.ts ─ {Notes,Auth}Context ─ 컴포넌트
+                                                                              └ src/lib, src/utils (순수 함수)
 ```
 
-- **`src/api/notes.ts`, `src/api/auth.ts`** — 유일한 fetch 계층. notes는
-  `fetchNotes / createNote / updateNote / deleteNote`, auth는 `login`.
-  `createNote`/`updateNote`가 `createdAt`/`updatedAt` 타임스탬프를 **클라이언트에서** 채웁니다.
-  컴포넌트는 절대 직접 `fetch`하지 말고 이 모듈을 통해야 합니다.
+> ⚠️ **JSON Server는 더 이상 쓰지 않습니다**(과거 백엔드). `json-server`가 `devDependencies`에, `db.json`·
+> `db.e2e.json`이 파일로 남아 있지만 **죽은 코드**입니다(`npm run server`·`localhost:3001` 제거됨).
+> 새 데이터 접근은 전부 Supabase 경유.
+
+- **`src/api/supabaseClient.ts`** — 앱 전역 Supabase 클라이언트의 단일 출처. `createSupabaseClient(url, key)`는
+  env에 의존하지 않는 순수 팩토리(테스트 용이)이고, `getSupabase()`가 env로 1회 지연 생성·캐시합니다.
+  api 계층은 이 함수만 호출하므로 **테스트는 이 모듈 하나만 모킹**하면 됩니다.
+- **`src/api/notes.ts`, `src/api/auth.ts`** — 유일한 데이터 접근 계층(전부 `getSupabase()` 사용). notes는
+  `fetchNotes / createNote / updateNote / deleteNote`, auth는 `login / signUp / logout / getSessionUser / onAuthChange`.
+  notes는 DB의 **snake_case row ↔ 앱의 camelCase `Note`**를 `toNote`/`toRow`로 매핑하고, `createNote`는
+  RLS(`user_id = auth.uid()`)를 만족하도록 세션 `user_id`를 명시 주입합니다.
+  `createNote`/`updateNote`가 타임스탬프를 **클라이언트에서** 채우고, **ID는 DB(`gen_random_uuid`)가 부여**합니다.
+  컴포넌트는 절대 직접 `fetch`/`supabase`를 호출하지 말고 이 모듈을 통해야 합니다.
+  (주의: `deleteNote`는 실제 DELETE — **소프트 삭제는 `updateNote`로 `deletedAt`을 채우는** Context의 `removeNote`이고, `purgeNote`만 `deleteNote`로 영구 제거합니다.)
 - **`src/context/NotesContext.tsx`** — 노트 상태의 단일 출처. `notes / loading / error`와
   `addNote / editNote / removeNote / togglePin / restoreNote / purgeNote / duplicateNote`를 노출.
   API 응답으로 로컬 `notes` 배열을 갱신(낙관적 업데이트 아님). `useNotes()` 훅으로만 접근(Provider 밖 호출 시 throw).
-  **삭제는 소프트 삭제**(`removeNote`가 `deletedAt`을 PATCH) — 실제 제거는 `purgeNote`(휴지통의 영구 삭제)뿐.
-- **`src/context/AuthContext.tsx`** — 인증 상태(`user / loading`)와 `login / logout`. 세션은
-  `localStorage('auth.user')`에 영속화하고 앱 시작 시 복원(복원 중 `loading`으로 LoginPage 깜빡임 방지).
-  `useAuth()` 훅으로만 접근.
+  **삭제는 소프트 삭제**(`removeNote`가 `updateNote`로 `deletedAt`을 채움) — 실제 제거는 `purgeNote`(휴지통의 영구 삭제)뿐.
+- **`src/context/AuthContext.tsx`** — 인증 상태(`user / loading`)와 `login / signup / logout`. 세션 영속화는
+  **supabase-js가 담당**(localStorage 수동 관리 제거) — 앱 시작 시 `getSessionUser()`로 복원하고
+  `onAuthChange`로 상태 변화를 구독합니다(복원 중 `loading`으로 LoginPage 깜빡임 방지). `useAuth()` 훅으로만 접근.
 - **`src/App.tsx`** — `AuthProvider`로 전체를 감싸고, `AppContent`가 **인증 게이트**(미로그인→`LoginPage`,
   로그인→`NotesProvider`+노트 화면) 역할. 화면 UI 상태(`selectedNoteId`, `isCreating`, `view`(notes/trash),
   `sortBy`/`sortDir`, `searchQuery`)를 모두 App이 소유하고 `Layout`에 `sidebar`/`main` 슬롯으로 주입.
@@ -122,10 +144,10 @@ db.json ─ JSON Server ─ src/api/{notes,auth}.ts ─ {Notes,Auth}Context ─ 
 
 ### API 호출 패턴
 
-- 모든 네트워크 호출은 **`src/api/notes.ts`에만** 존재. 컴포넌트/Context는 이 모듈만 호출.
-- 각 함수: `async` + `fetch` + `if (!res.ok) throw new Error(...)` + `res.json()` 반환.
-- 타임스탬프는 클라이언트가 채우고(`new Date().toISOString()`), **ID는 JSON Server가 부여**
-  (POST 응답의 `id` 사용, 클라이언트 생성 금지).
+- 모든 데이터 접근은 **`src/api/{notes,auth}.ts`에만** 존재(내부적으로 `getSupabase()`). 컴포넌트/Context는 이 모듈만 호출.
+- 각 함수: `async` + supabase 쿼리 + `if (error) throw new Error(...)` 후 매핑된 결과 반환.
+- 타임스탬프는 클라이언트가 채우고(`new Date().toISOString()`), **ID는 DB(`gen_random_uuid`)가 부여**
+  (insert 응답의 `id` 사용, 클라이언트 생성 금지).
 
 ### 네이밍
 
@@ -154,7 +176,9 @@ husky pre-commit이 **lint-staged**를 돌립니다 (`package.json`의 `lint-sta
 
 - **export 방식**: `App.tsx`만 `export default`, 나머지 컴포넌트는 named export. 통일 권장.
 - **에러 메시지 언어**: `api/notes.ts`는 영어(`'Failed to fetch notes'`)로 throw하지만
-  UI 노출 문구·주석은 한국어. 사용자 노출 메시지 기준이 섞여 있음.
+  UI 노출 문구·주석은 한국어. 사용자 노출 메시지 기준이 섞여 있음. (단 `api/auth.ts`의 `'Invalid credentials'`는
+  `LoginPage`가 한국어로 매핑하므로 문구를 바꾸면 안 됨.)
+- **죽은 의존성/파일**: `json-server`(devDep)·`db.json`·`db.e2e.json`은 Supabase 이행 후 미사용. 제거 후보.
 - **boolean 네이밍**: `isCreating`/`isSelected`(is 접두사)와 `loading`/`saving`(접두사 없음)이 혼재.
 - **에러 처리 위치**: Context의 변경 함수(`addNote`/`editNote`/`removeNote`)는 자체 catch가 없고,
   **호출부에서 try/catch+`alert`**로 처리하는 패턴. (삭제 실패 미처리 버그는 `NoteList.handleDelete`
