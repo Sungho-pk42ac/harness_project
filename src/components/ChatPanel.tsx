@@ -79,8 +79,8 @@ export function ChatPanel({ open, onClose, onSend, pendingConfirm }: ChatPanelPr
         </button>
       </div>
 
-      {/* 메시지 목록 */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      {/* 메시지 목록 — aria-live로 새 메시지를 스크린리더에 알림 (NAA-8 접근성) */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3" aria-live="polite" aria-atomic="false">
         {messages.length === 0 && (
           <p className="text-muted-foreground text-center py-8 text-sm">
             노트를 만들거나 찾아달라고 말해 보세요.
