@@ -8,6 +8,7 @@ import { TrashList } from './components/TrashList';
 import { SortControl } from './components/SortControl';
 import { SearchBar } from './components/SearchBar';
 import { LoginPage } from './components/LoginPage';
+import { ChatPanel } from './components/ChatPanel';
 import type { SortBy, SortDir } from './utils/sortNotes';
 
 // 인증 게이트 — 미로그인 시 로그인 화면, 로그인 시 노트 화면 (ADR-0003)
@@ -22,6 +23,13 @@ function AppContent() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   // 검색어 — 화면 상태(App 소유), 원본 불변 필터 (search spec-fixed §1)
   const [searchQuery, setSearchQuery] = useState('');
+  // AI 비서 패널 열림 상태 (note-assistant-agent NAA-1). 화면 상태이므로 App 소유
+  const [assistantOpen, setAssistantOpen] = useState(false);
+
+  // NAA-1 자리표시자 — 실제 에이전트(runAgent) 연결은 NAA-3에서 교체한다
+  const handleAgentSend = async (_text: string): Promise<string> => {
+    return '에이전트 연결은 준비 중이에요. 곧 노트를 만들고 찾아드릴게요.';
+  };
 
   const handleSelectNote = (id: string) => {
     setSelectedNoteId(id);
@@ -59,6 +67,14 @@ function AppContent() {
         onNewNote={handleNewNote}
         view={view}
         onToggleView={handleToggleView}
+        onToggleAssistant={() => setAssistantOpen((v) => !v)}
+        assistant={
+          <ChatPanel
+            open={assistantOpen}
+            onClose={() => setAssistantOpen(false)}
+            onSend={handleAgentSend}
+          />
+        }
         sidebar={
           view === 'trash' ? (
             <TrashList />
