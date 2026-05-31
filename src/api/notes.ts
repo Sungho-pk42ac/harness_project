@@ -1,11 +1,39 @@
 import { Note } from '../types/note';
+import { getSupabase } from './supabaseClient';
 
 const API_URL = 'http://localhost:3001';
 
+// Supabase notes row(snake_case) 형태 (ADR-0002)
+interface NoteRow {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  tags: string[] | null;
+  is_pinned: boolean | null;
+  deleted_at: string | null;
+}
+
+/** snake_case row → camelCase Note 매핑 (구버전 방어: tags/is_pinned 기본값). */
+function toNote(row: NoteRow): Note {
+  return {
+    id: row.id,
+    title: row.title,
+    content: row.content,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    tags: row.tags ?? [],
+    isPinned: row.is_pinned ?? false,
+    deletedAt: row.deleted_at ?? null,
+  };
+}
+
 export async function fetchNotes(): Promise<Note[]> {
-  const res = await fetch(`${API_URL}/notes`);
-  if (!res.ok) throw new Error('Failed to fetch notes');
-  return res.json();
+  // 삭제된 노트도 포함해 전부 반환 — 휴지통 분리는 상위(Context/utils) 소관(동작 불변).
+  const { data, error } = await getSupabase().from('notes').select('*');
+  if (error) throw new Error('Failed to fetch notes');
+  return (data ?? []).map(toNote);
 }
 
 /**

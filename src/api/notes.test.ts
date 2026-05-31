@@ -1,4 +1,20 @@
-import { createNote, updateNote } from './notes';
+import type { Mock } from 'vitest';
+import { createNote, updateNote, fetchNotes } from './notes';
+import { getSupabase } from './supabaseClient';
+
+// fetchNotes는 Supabase 경계(getSupabase)만 모킹한다(SUPA-2). create/update는 아직 fetch 기반.
+vi.mock('./supabaseClient', () => ({ getSupabase: vi.fn() }));
+
+/**
+ * getSupabase().from('notes').select('*')가 주어진 결과를 resolve하도록 모킹한다.
+ * @param result PostgREST 응답을 흉내낸 { data, error }
+ */
+function stubSupabaseSelect(result: { data: unknown; error: unknown }) {
+  const select = vi.fn().mockResolvedValue(result);
+  const from = vi.fn(() => ({ select }));
+  (getSupabase as Mock).mockReturnValue({ from } as unknown as ReturnType<typeof getSupabase>);
+  return { from, select };
+}
 
 // 네트워크 경계인 fetch를 모킹한다. 응답은 { ok, json } 형태로 흉내낸다.
 /**
@@ -20,6 +36,56 @@ function lastRequestBody(fetchMock: ReturnType<typeof vi.fn>): Record<string, un
   const init = calls.length ? (calls[calls.length - 1][1] as RequestInit | undefined) : undefined;
   return init?.body ? JSON.parse(init.body as string) : {};
 }
+
+describe('fetchNotes', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[정상] fetchNotes — should snake_case row를 camelCase Note[]로 매핑해 반환한다 when supabase가 데이터를 반환한다', async () => {
+    // Arrange: snake_case row 한 건
+    stubSupabaseSelect({
+      data: [
+        {
+          id: 'u1',
+          title: 't',
+          content: 'c',
+          created_at: 'c-time',
+          updated_at: 'u-time',
+          tags: ['x'],
+          is_pinned: true,
+          deleted_at: null,
+        },
+      ],
+      error: null,
+    });
+    // Act
+    const notes = await fetchNotes();
+    // Assert: camelCase Note로 매핑
+    expect(notes).toEqual([
+      {
+        id: 'u1',
+        title: 't',
+        content: 'c',
+        createdAt: 'c-time',
+        updatedAt: 'u-time',
+        tags: ['x'],
+        isPinned: true,
+        deletedAt: null,
+      },
+    ]);
+  });
+
+  it('[경계] fetchNotes — should 빈 배열을 반환한다 when data가 null이다', async () => {
+    stubSupabaseSelect({ data: null, error: null });
+    expect(await fetchNotes()).toEqual([]);
+  });
+
+  it("[예외] fetchNotes — should Error('Failed to fetch notes')를 throw한다 when supabase가 error를 반환한다", async () => {
+    stubSupabaseSelect({ data: null, error: { message: 'boom' } });
+    await expect(fetchNotes()).rejects.toThrow('Failed to fetch notes');
+  });
+});
 
 describe('createNote', () => {
   afterEach(() => {
