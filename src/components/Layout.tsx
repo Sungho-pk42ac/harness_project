@@ -8,12 +8,21 @@ interface LayoutProps {
   onNewNote: () => void;
   sidebar: ReactNode;
   main: ReactNode;
-  // 휴지통/노트 화면 전환 (trash spec-fixed §3-2)
-  view: 'notes' | 'trash';
+  // 화면 전환: 노트/휴지통/그래프 (trash spec-fixed §3-2, note-graph-viz §5)
+  view: 'notes' | 'trash' | 'graph';
   onToggleView: () => void;
+  // 그래프 뷰 토글 (note-graph-viz NGV-2). 옵셔널 — 미주입 시 버튼 미표시
+  onToggleGraph?: () => void;
 }
 
-export function Layout({ onNewNote, sidebar, main, view, onToggleView }: LayoutProps) {
+export function Layout({
+  onNewNote,
+  sidebar,
+  main,
+  view,
+  onToggleView,
+  onToggleGraph,
+}: LayoutProps) {
   const { user, logout } = useAuth();
   const { notes } = useNotes();
 
@@ -41,6 +50,15 @@ export function Layout({ onNewNote, sidebar, main, view, onToggleView }: LayoutP
         <div className="flex items-center gap-3">
           {/* 현재 사용자 이메일 */}
           {user && <span className="text-sm text-muted-foreground">{user.email}</span>}
+          {/* 그래프 토글 — 노트/그래프 화면 전환 (note-graph-viz) */}
+          {onToggleGraph && (
+            <button
+              onClick={onToggleGraph}
+              className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              {view === 'graph' ? '노트로 돌아가기' : '그래프'}
+            </button>
+          )}
           {/* 휴지통 토글 — 노트/휴지통 화면 전환 */}
           <button
             onClick={onToggleView}

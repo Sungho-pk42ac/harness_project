@@ -48,3 +48,4 @@ db.e2e.json
 /test-results/
 /playwright-report/
 /playwright/.cache/
+.vercel
