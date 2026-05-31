@@ -24,12 +24,18 @@ function makeBuilder(result: { data: unknown; error: unknown }) {
   return builder;
 }
 
-/** getSupabase().from('notes')가 주어진 결과의 빌더를 반환하도록 모킹한다. */
+/** getSupabase().from('notes')와 .auth.getUser()를 모킹한다(createNote가 세션 user_id를 읽음). */
 function stubSupabase(result: { data: unknown; error: unknown }) {
   const builder = makeBuilder(result);
   const from = vi.fn(() => builder);
-  (getSupabase as Mock).mockReturnValue({ from } as unknown as ReturnType<typeof getSupabase>);
-  return { from, builder };
+  const auth = {
+    getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null }),
+  };
+  (getSupabase as Mock).mockReturnValue({
+    from,
+    auth,
+  } as unknown as ReturnType<typeof getSupabase>);
+  return { from, builder, auth };
 }
 
 const rowFixture = {
@@ -85,6 +91,12 @@ describe('createNote', () => {
     await createNote({ title: 't', content: 'c', tags: ['react', 'vite'], isPinned: false });
     expect(from).toHaveBeenCalledWith('notes');
     expect((builder.insert as Mock).mock.calls[0][0]).toMatchObject({ tags: ['react', 'vite'] });
+  });
+
+  it('[정상] createNote — should 세션 user_id를 insert에 주입한다 when 로그인 상태다 (RLS own_insert)', async () => {
+    const { builder } = stubSupabase({ data: rowFixture, error: null });
+    await createNote({ title: 't', content: 'c', tags: [], isPinned: false });
+    expect((builder.insert as Mock).mock.calls[0][0]).toMatchObject({ user_id: 'user-1' });
   });
 
   it('[정상] createNote — should DB가 부여한 id·tags를 가진 Note를 반환한다 when 요청이 성공한다', async () => {

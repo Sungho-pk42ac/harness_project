@@ -6,24 +6,31 @@ import * as notesApi from './api/notes';
 import type { User } from './types/user';
 
 // 네트워크 경계(api 모듈)를 모킹해 인증 게이트 동작만 검증한다.
+// 세션의 단일 출처는 supabase(api/auth)다 — localStorage가 아니라 getSessionUser/onAuthChange를 제어한다.
 vi.mock('./api/auth');
 vi.mock('./api/notes');
 
 const seededUser: User = { id: 'u1', email: 'test@test.com' };
 
+/** 공통 기본 모킹: 로그아웃 상태(세션 없음) + 노트 빈 목록 + onAuthChange no-op. */
+function resetAuthMocks(sessionUser: User | null = null) {
+  vi.mocked(notesApi.fetchNotes).mockResolvedValue([]);
+  vi.mocked(authApi.getSessionUser).mockResolvedValue(sessionUser);
+  vi.mocked(authApi.onAuthChange).mockReturnValue(() => {});
+  vi.mocked(authApi.logout).mockResolvedValue();
+}
+
 describe('App (인증 게이트)', () => {
   beforeEach(() => {
-    vi.mocked(notesApi.fetchNotes).mockResolvedValue([]);
-    localStorage.clear();
+    vi.clearAllMocks();
+    resetAuthMocks(null);
   });
 
-  it('[경계] App — should 로그인 화면(이메일·비밀번호·로그인 버튼)을 보여준다 when 미로그인 상태로 앱을 연다', () => {
+  it('[경계] App — should 로그인 화면(이메일·비밀번호·로그인 버튼)을 보여준다 when 미로그인 상태로 앱을 연다', async () => {
     render(<App />);
-    // 로그인 폼 요소가 보인다
-    expect(screen.getByPlaceholderText('이메일')).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText('이메일')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('비밀번호')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '로그인' })).toBeInTheDocument();
-    // 노트 화면(+ 새 노트)은 보이지 않는다
     expect(screen.queryByRole('button', { name: '+ 새 노트' })).not.toBeInTheDocument();
   });
 
@@ -31,10 +38,9 @@ describe('App (인증 게이트)', () => {
     vi.mocked(authApi.login).mockResolvedValue(seededUser);
     const user = userEvent.setup();
     render(<App />);
-    await user.type(screen.getByPlaceholderText('이메일'), 'test@test.com');
+    await user.type(await screen.findByPlaceholderText('이메일'), 'test@test.com');
     await user.type(screen.getByPlaceholderText('비밀번호'), '1234');
     await user.click(screen.getByRole('button', { name: '로그인' }));
-    // 노트 화면으로 전환 — Layout의 "+ 새 노트"가 보인다
     expect(await screen.findByRole('button', { name: '+ 새 노트' })).toBeInTheDocument();
   });
 
@@ -42,10 +48,9 @@ describe('App (인증 게이트)', () => {
     vi.mocked(authApi.login).mockRejectedValue(new Error('Invalid credentials'));
     const user = userEvent.setup();
     render(<App />);
-    await user.type(screen.getByPlaceholderText('이메일'), 'no@no.com');
+    await user.type(await screen.findByPlaceholderText('이메일'), 'no@no.com');
     await user.type(screen.getByPlaceholderText('비밀번호'), 'wrong');
     await user.click(screen.getByRole('button', { name: '로그인' }));
-    // 노트 화면으로 전환되지 않고 로그인 폼이 유지된다
     expect(await screen.findByPlaceholderText('이메일')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ 새 노트' })).not.toBeInTheDocument();
   });
@@ -53,38 +58,31 @@ describe('App (인증 게이트)', () => {
 
 describe('App (세션 유지)', () => {
   beforeEach(() => {
-    vi.mocked(notesApi.fetchNotes).mockResolvedValue([]);
-    localStorage.clear();
+    vi.clearAllMocks();
   });
 
-  it('[정상] App — should 다시 로그인하지 않아도 노트 화면(+ 새 노트)이 보인다 when localStorage에 user가 저장돼 있고 앱을 연다', async () => {
-    // Arrange: 이전 세션이 localStorage에 남아 있다
-    localStorage.setItem('auth.user', JSON.stringify(seededUser));
-    // Act
+  it('[정상] App — should 다시 로그인하지 않아도 노트 화면이 보인다 when Supabase 세션이 복원된다', async () => {
+    resetAuthMocks(seededUser); // getSessionUser가 기존 세션을 반환
     render(<App />);
-    // Assert: 로그인 없이 노트 화면 복원
     expect(await screen.findByRole('button', { name: '+ 새 노트' })).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('이메일')).not.toBeInTheDocument();
   });
 
-  it('[정상] AuthContext — should localStorage에 비밀번호 없이 {id,email}만 저장한다 when 로그인에 성공한다', async () => {
+  it('[정상] App — should login에 입력한 이메일·비밀번호를 그대로 전달한다 when 로그인한다', async () => {
+    resetAuthMocks(null);
     vi.mocked(authApi.login).mockResolvedValue(seededUser);
     const user = userEvent.setup();
     render(<App />);
-    await user.type(screen.getByPlaceholderText('이메일'), 'test@test.com');
+    await user.type(await screen.findByPlaceholderText('이메일'), 'test@test.com');
     await user.type(screen.getByPlaceholderText('비밀번호'), '1234');
     await user.click(screen.getByRole('button', { name: '로그인' }));
     await screen.findByRole('button', { name: '+ 새 노트' });
-    // Assert: 저장된 세션에 비밀번호가 없다
-    const stored = JSON.parse(localStorage.getItem('auth.user') ?? '{}');
-    expect(stored).toEqual({ id: 'u1', email: 'test@test.com' });
-    expect(stored).not.toHaveProperty('password');
+    expect(authApi.login).toHaveBeenCalledWith('test@test.com', '1234');
   });
 
   it('[경계] App — should 로그인 화면이 깜빡이지 않는다 when 저장된 세션을 복원하며 시작한다', async () => {
-    localStorage.setItem('auth.user', JSON.stringify(seededUser));
+    resetAuthMocks(seededUser);
     render(<App />);
-    // 복원 중 loading 가드로 LoginPage가 렌더되지 않아 이메일 입력칸이 끝까지 나타나지 않는다
     await screen.findByRole('button', { name: '+ 새 노트' });
     expect(screen.queryByPlaceholderText('이메일')).not.toBeInTheDocument();
   });
@@ -92,49 +90,42 @@ describe('App (세션 유지)', () => {
 
 describe('App (로그아웃·사용자 표시)', () => {
   beforeEach(() => {
-    vi.mocked(notesApi.fetchNotes).mockResolvedValue([]);
-    localStorage.clear();
+    vi.clearAllMocks();
+    resetAuthMocks(seededUser); // 로그인된 상태로 시작
   });
 
-  it('[정상] App — should 로그인 화면으로 돌아간다 when 로그인 상태에서 헤더의 로그아웃 버튼을 누른다', async () => {
-    localStorage.setItem('auth.user', JSON.stringify(seededUser));
+  it('[정상] App — should 로그인 화면으로 돌아간다 when 헤더의 로그아웃 버튼을 누른다', async () => {
     const user = userEvent.setup();
     render(<App />);
     await screen.findByRole('button', { name: '+ 새 노트' });
-    // Act: 로그아웃
     await user.click(screen.getByRole('button', { name: '로그아웃' }));
-    // Assert: 로그인 화면 복귀
     expect(await screen.findByPlaceholderText('이메일')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ 새 노트' })).not.toBeInTheDocument();
   });
 
-  it('[정상] App — should localStorage 세션이 제거된다 when 로그아웃한다', async () => {
-    localStorage.setItem('auth.user', JSON.stringify(seededUser));
+  it('[정상] App — should Supabase signOut(api.logout)을 호출한다 when 로그아웃한다', async () => {
     const user = userEvent.setup();
     render(<App />);
     await screen.findByRole('button', { name: '+ 새 노트' });
     await user.click(screen.getByRole('button', { name: '로그아웃' }));
-    // Assert: 세션 제거 → 자동 재로그인 불가
-    expect(localStorage.getItem('auth.user')).toBeNull();
+    expect(authApi.logout).toHaveBeenCalled();
   });
 
   it('[정상] Layout — should 헤더에 현재 사용자 이메일이 표시된다 when test@test.com으로 로그인돼 있다', async () => {
-    localStorage.setItem('auth.user', JSON.stringify(seededUser));
     render(<App />);
     await screen.findByRole('button', { name: '+ 새 노트' });
-    // Assert: 헤더에 이메일 표시
     expect(screen.getByText('test@test.com')).toBeInTheDocument();
   });
 });
 
 describe('App (로그인 실패 에러)', () => {
   beforeEach(() => {
-    vi.mocked(notesApi.fetchNotes).mockResolvedValue([]);
-    localStorage.clear();
+    vi.clearAllMocks();
+    resetAuthMocks(null);
   });
 
   const submitLogin = async (user: ReturnType<typeof userEvent.setup>) => {
-    await user.type(screen.getByPlaceholderText('이메일'), 'x@x.com');
+    await user.type(await screen.findByPlaceholderText('이메일'), 'x@x.com');
     await user.type(screen.getByPlaceholderText('비밀번호'), 'pw');
     await user.click(screen.getByRole('button', { name: '로그인' }));
   };
@@ -160,8 +151,8 @@ describe('App (로그인 실패 에러)', () => {
     alertSpy.mockRestore();
   });
 
-  it('[예외] LoginPage — should 사용자 친화적 에러 메시지를 보여준다 when 네트워크 오류로 실패한다', async () => {
-    vi.mocked(authApi.login).mockRejectedValue(new Error('Failed to login'));
+  it('[예외] LoginPage — should 사용자 친화적 에러 메시지를 보여준다 when 비-자격증명 오류로 실패한다', async () => {
+    vi.mocked(authApi.login).mockRejectedValue(new Error('Failed to logout'));
     const user = userEvent.setup();
     render(<App />);
     await submitLogin(user);
@@ -178,10 +169,8 @@ describe('App (로그인 실패 에러)', () => {
     expect(
       await screen.findByText('이메일 또는 비밀번호가 올바르지 않습니다.'),
     ).toBeInTheDocument();
-    // 재시도: 이번엔 성공
     vi.mocked(authApi.login).mockResolvedValue(seededUser);
     await user.click(screen.getByRole('button', { name: '로그인' }));
-    // 노트 화면 전환 + 에러 사라짐
     expect(await screen.findByRole('button', { name: '+ 새 노트' })).toBeInTheDocument();
     expect(screen.queryByText('이메일 또는 비밀번호가 올바르지 않습니다.')).not.toBeInTheDocument();
   });

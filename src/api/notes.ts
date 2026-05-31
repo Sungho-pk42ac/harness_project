@@ -55,9 +55,13 @@ export async function createNote(
   note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<Note> {
   const now = new Date().toISOString();
+  // RLS(own_insert: user_id = auth.uid())를 만족하도록 세션 user_id를 명시 주입한다(default 비의존).
+  const { data: userData } = await getSupabase().auth.getUser();
+  const userId = userData.user?.id;
+  if (!userId) throw new Error('Failed to create note');
   const { data, error } = await getSupabase()
     .from('notes')
-    .insert(toRow({ ...note, createdAt: now, updatedAt: now }))
+    .insert({ ...toRow({ ...note, createdAt: now, updatedAt: now }), user_id: userId })
     .select()
     .single();
   if (error || !data) throw new Error('Failed to create note');
