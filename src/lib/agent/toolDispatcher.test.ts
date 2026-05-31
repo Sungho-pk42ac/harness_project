@@ -71,11 +71,31 @@ describe('agent/toolDispatcher', () => {
     expect(deps.editNote).not.toHaveBeenCalled();
   });
 
-  it('should removeNote를 호출한다 when deleteNote', async () => {
-    const deps = makeDeps();
+  it('should 확인 후에만 removeNote를 호출한다 when deleteNote가 승인됨', async () => {
+    const confirmDelete = vi.fn(async () => true);
+    const deps = makeDeps({ confirmDelete });
     const res = await dispatchTool({ id: 't6', name: 'deleteNote', args: { id: 'n1' } }, deps);
+    expect(confirmDelete).toHaveBeenCalledWith('n1');
     expect(deps.removeNote).toHaveBeenCalledWith('n1');
     expect(res.ok).toBe(true);
+    expect(res.data).toMatchObject({ deleted: true });
+  });
+
+  it('should removeNote를 호출하지 않는다 when 사용자가 삭제를 취소함', async () => {
+    const confirmDelete = vi.fn(async () => false);
+    const deps = makeDeps({ confirmDelete });
+    const res = await dispatchTool({ id: 't6b', name: 'deleteNote', args: { id: 'n1' } }, deps);
+    expect(confirmDelete).toHaveBeenCalledWith('n1');
+    expect(deps.removeNote).not.toHaveBeenCalled();
+    expect(res.ok).toBe(true);
+    expect(res.data).toMatchObject({ deleted: false, cancelled: true });
+  });
+
+  it('should 확인 콜백이 없으면 삭제하지 않는다 when confirmDelete 미주입', async () => {
+    const deps = makeDeps();
+    const res = await dispatchTool({ id: 't6c', name: 'deleteNote', args: { id: 'n1' } }, deps);
+    expect(deps.removeNote).not.toHaveBeenCalled();
+    expect(res.data).toMatchObject({ deleted: false });
   });
 
   it('should searchNotes 위임 결과를 반환한다 when searchNotes', async () => {
