@@ -68,6 +68,19 @@ describe('App (세션 유지)', () => {
     expect(screen.queryByPlaceholderText('이메일')).not.toBeInTheDocument();
   });
 
+  it('[정상] App — should 회원가입 모드로 가입하면 노트 화면으로 전환된다 when 새 계정으로 가입한다', async () => {
+    resetAuthMocks(null);
+    vi.mocked(authApi.signUp).mockResolvedValue({ id: 'n1', email: 'new@new.com' });
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: '계정이 없으신가요? 회원가입' }));
+    await user.type(screen.getByPlaceholderText('이메일'), 'new@new.com');
+    await user.type(screen.getByPlaceholderText('비밀번호'), 'pw1234');
+    await user.click(screen.getByRole('button', { name: '회원가입' }));
+    expect(await screen.findByRole('button', { name: '+ 새 노트' })).toBeInTheDocument();
+    expect(authApi.signUp).toHaveBeenCalledWith('new@new.com', 'pw1234');
+  });
+
   it('[정상] App — should login에 입력한 이메일·비밀번호를 그대로 전달한다 when 로그인한다', async () => {
     resetAuthMocks(null);
     vi.mocked(authApi.login).mockResolvedValue(seededUser);

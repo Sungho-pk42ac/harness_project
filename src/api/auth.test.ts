@@ -1,5 +1,5 @@
 import type { Mock } from 'vitest';
-import { login, logout, getSessionUser } from './auth';
+import { login, logout, getSessionUser, signUp } from './auth';
 import { getSupabase } from './supabaseClient';
 
 vi.mock('./supabaseClient', () => ({ getSupabase: vi.fn() }));
@@ -31,6 +31,26 @@ describe('login (api/auth)', () => {
       }),
     });
     await expect(login('no@no.com', 'x')).rejects.toThrow('Invalid credentials');
+  });
+});
+
+describe('signUp (api/auth)', () => {
+  it('[정상] signUp — should User를 반환한다 when 가입이 성공한다', async () => {
+    stubAuth({
+      signUp: vi
+        .fn()
+        .mockResolvedValue({ data: { user: { id: 'n1', email: 'new@new.com' } }, error: null }),
+    });
+    expect(await signUp('new@new.com', 'pw1234')).toEqual({ id: 'n1', email: 'new@new.com' });
+  });
+
+  it('[예외] signUp — should error.message를 throw한다 when 가입이 실패한다', async () => {
+    stubAuth({
+      signUp: vi
+        .fn()
+        .mockResolvedValue({ data: { user: null }, error: { message: 'User already registered' } }),
+    });
+    await expect(signUp('dup@dup.com', 'pw')).rejects.toThrow('User already registered');
   });
 });
 

@@ -24,6 +24,18 @@ describe('AuthContext', () => {
     expect(result.current.user).toEqual({ id: 'u1', email: 'test@test.com' });
   });
 
+  it('[정상] AuthContext — should signup 성공 시 user를 설정한다 when 회원가입한다', async () => {
+    vi.mocked(api.getSessionUser).mockResolvedValue(null);
+    vi.mocked(api.signUp).mockResolvedValue({ id: 'n1', email: 'new@new.com' });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.signup('new@new.com', 'pw1234');
+    });
+    expect(api.signUp).toHaveBeenCalledWith('new@new.com', 'pw1234');
+    expect(result.current.user).toEqual({ id: 'n1', email: 'new@new.com' });
+  });
+
   it('[정상] AuthContext — should signOut 호출 + user를 null로 만든다 when logout을 호출한다', async () => {
     vi.mocked(api.getSessionUser).mockResolvedValue({ id: 'u1', email: 'test@test.com' });
     vi.mocked(api.logout).mockResolvedValue();
