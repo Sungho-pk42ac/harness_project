@@ -40,7 +40,14 @@ export function LoginPage() {
         onSubmit={handleSubmit}
         className="bg-card rounded-3xl px-8 py-10 shadow-md border border-border w-full max-w-sm space-y-5"
       >
-        <h1 className="text-xl font-bold text-foreground text-center">{submitLabel}</h1>
+        {/* 브랜드 워드마크 + 제목 + 부제 — 라틴 로고는 font-display(Boogaloo)·인디고 포인트 */}
+        <div className="text-center space-y-1">
+          <p className="text-2xl font-display tracking-wide text-primary">SLNOTE</p>
+          <h1 className="text-lg font-bold text-foreground">{submitLabel}</h1>
+          <p className="text-xs text-muted-foreground">
+            {isLogin ? '노트를 안전하게 보관하세요' : '새 계정을 만들어 시작하세요'}
+          </p>
+        </div>
         <input
           type="email"
           value={email}
@@ -69,7 +76,15 @@ export function LoginPage() {
           onClick={toggleMode}
           className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
-          {isLogin ? '계정이 없으신가요? 회원가입' : '이미 계정이 있으신가요? 로그인'}
+          {isLogin ? (
+            <>
+              계정이 없으신가요? <span className="font-semibold text-primary">회원가입</span>
+            </>
+          ) : (
+            <>
+              이미 계정이 있으신가요? <span className="font-semibold text-primary">로그인</span>
+            </>
+          )}
         </button>
       </form>
     </div>
