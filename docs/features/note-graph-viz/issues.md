@@ -44,6 +44,10 @@ walking skeleton(NGV-1·2) 먼저. AC(Given/When/Then) ≠ DoD(품질 게이트)
 
 NGV-1 → NGV-2 (walking skeleton) → NGV-3.
 
-## GitHub 이슈 역링크
+## GitHub 이슈 역링크 (등록 완료)
 
-(등록 후 채움)
+| 이슈  | GitHub |
+| ----- | ------ |
+| NGV-1 | #85    |
+| NGV-2 | #86    |
+| NGV-3 | #87    |
