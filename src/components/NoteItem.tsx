@@ -24,7 +24,9 @@ export function NoteItem({
     <div
       onClick={() => onSelect(note.id)}
       className={`bg-card rounded-2xl p-4 border cursor-pointer transition-all ${
-        isSelected ? 'border-foreground shadow-lg' : 'border-border hover:shadow-md'
+        isSelected
+          ? 'border-primary ring-1 ring-primary shadow-lg'
+          : 'border-border hover:shadow-md'
       }`}
     >
       <div className="flex items-start justify-between gap-2">

@@ -48,7 +48,7 @@ export function LoginPage() {
         {error && <p className="text-sm text-destructive">{error}</p>}
         <button
           type="submit"
-          className="w-full bg-foreground text-card px-5 py-2.5 rounded-xl text-sm font-semibold hover:opacity-75 transition-opacity cursor-pointer"
+          className="w-full bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
         >
           로그인
         </button>
