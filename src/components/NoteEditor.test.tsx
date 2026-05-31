@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NoteEditor } from './NoteEditor';
 import type { Note } from '../types/note';
@@ -401,5 +401,60 @@ describe('NoteEditor', () => {
   it('[경계] NoteEditor — should 미저장 새 노트(isCreating)에서는 내보내기 버튼이 없다', () => {
     render(<NoteEditor selectedNoteId={null} isCreating={true} onDone={() => {}} />);
     expect(screen.queryByRole('button', { name: '내보내기' })).not.toBeInTheDocument();
+  });
+});
+
+describe('NoteEditor 자동저장 (auto-save)', () => {
+  const noteA: Note = {
+    id: 'a',
+    title: 'A 원본',
+    content: '내용',
+    tags: [],
+    isPinned: false,
+    createdAt: 'now',
+    updatedAt: 'now',
+  };
+  const noteB: Note = { ...noteA, id: 'b', title: 'B 원본' };
+
+  beforeEach(() => {
+    addNote.mockClear();
+    editNote.mockClear();
+    mockNotes = [noteA, noteB];
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('[정상] NoteEditor — should 디바운스 시간이 지나면 editNote를 자동 호출한다 when 기존 노트를 편집한다', () => {
+    render(<NoteEditor selectedNoteId="a" isCreating={false} onDone={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText('제목'), { target: { value: 'A 수정' } });
+    expect(editNote).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(800);
+    });
+    expect(editNote).toHaveBeenCalledWith('a', expect.objectContaining({ title: 'A 수정' }));
+  });
+
+  it('[정상] NoteEditor — should 노트 전환 시 대기 중 자동저장을 flush한다 when 디바운스 만료 전 다른 노트로 전환한다', () => {
+    const { rerender } = render(
+      <NoteEditor selectedNoteId="a" isCreating={false} onDone={() => {}} />,
+    );
+    fireEvent.change(screen.getByPlaceholderText('제목'), { target: { value: 'A 수정' } });
+    expect(editNote).not.toHaveBeenCalled();
+    // 디바운스 만료 전 전환 → 이전 노트(a)의 미저장 편집이 flush되어 저장된다
+    act(() => {
+      rerender(<NoteEditor selectedNoteId="b" isCreating={false} onDone={() => {}} />);
+    });
+    expect(editNote).toHaveBeenCalledWith('a', expect.objectContaining({ title: 'A 수정' }));
+  });
+
+  it('[경계] NoteEditor — should 자동저장하지 않는다 when 신규 노트(isCreating)를 편집한다', () => {
+    render(<NoteEditor selectedNoteId={null} isCreating={true} onDone={() => {}} />);
+    fireEvent.change(screen.getByPlaceholderText('제목'), { target: { value: '새 제목' } });
+    act(() => {
+      vi.advanceTimersByTime(800);
+    });
+    expect(editNote).not.toHaveBeenCalled();
   });
 });
