@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -33,6 +34,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(loggedIn);
   };
 
+  // 회원가입 — 성공 시 user 설정(확인 off면 즉시 로그인). 실패는 호출부로 전파.
+  const signup = async (email: string, password: string) => {
+    const created = await api.signUp(email, password);
+    setUser(created);
+  };
+
   // 로그아웃 — Supabase 세션 종료 + 메모리 상태 해제(onAuthChange도 null로 동기화).
   const logout = () => {
     void api.logout();
@@ -40,7 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

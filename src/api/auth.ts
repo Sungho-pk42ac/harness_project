@@ -18,6 +18,17 @@ export async function login(email: string, password: string): Promise<User> {
   return toUser(data.user);
 }
 
+/**
+ * 회원가입 — Supabase Auth `signUp`. 이메일 확인이 꺼져 있으면 즉시 세션이 생성되어 바로 로그인된다.
+ * 실패(이미 가입된 이메일·약한 비밀번호 등) 시 supabase 메시지를 그대로 throw해 호출부가 분기한다.
+ */
+export async function signUp(email: string, password: string): Promise<User> {
+  const { data, error } = await getSupabase().auth.signUp({ email, password });
+  if (error) throw new Error(error.message);
+  if (!data.user) throw new Error('Sign up failed');
+  return toUser(data.user);
+}
+
 /** 로그아웃 — Supabase 세션 종료. */
 export async function logout(): Promise<void> {
   const { error } = await getSupabase().auth.signOut();
