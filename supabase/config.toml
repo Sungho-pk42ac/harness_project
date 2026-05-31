@@ -22,8 +22,10 @@ sql_paths = ["./seed.sql"]
 [studio]
 enabled = false
 
+# auth(gotrue)를 켜야 `supabase status -o env`가 ANON_KEY를 출력한다(키를 추측하지 않고 실제 값 사용).
+# 앱 인증은 여전히 json-server(/users)를 쓰고 gotrue는 사용하지 않지만, anon 키 발급/JWT 검증을 위해 켠다.
 [auth]
-enabled = false
+enabled = true
 
 [storage]
 enabled = false
