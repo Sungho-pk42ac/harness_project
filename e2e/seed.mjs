@@ -6,6 +6,8 @@ import { dirname, resolve } from 'node:path';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+// 노트는 더 이상 json-server가 아니라 Supabase(supabase/seed.sql)가 시드한다.
+// json-server는 인증(/users)만 담당한다(인증 이전은 다음 런 supabase-auth-rls).
 const seed = {
   // 로그인 게이트(LOGIN-1~5) 통과용 시드 계정 — spec-fixed §1 규약(test@test.com / 1234)
   users: [
@@ -15,17 +17,9 @@ const seed = {
       password: '1234',
     },
   ],
-  notes: [
-    // tags 필드가 없는 구버전 노트 — 호환성(ADR-0001, note.tags ?? []) 확인용 시드
-    {
-      id: 'seed-legacy',
-      title: '구버전 노트',
-      content: '태그 필드가 없던 시절의 노트',
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    },
-  ],
+  // /notes 형태 유지용(앱은 사용 안 함 — 노트는 Supabase에서 읽고 쓴다)
+  notes: [],
 };
 
 writeFileSync(resolve(root, 'db.e2e.json'), JSON.stringify(seed, null, 2));
-console.log('[e2e] db.e2e.json seeded');
+console.log('[e2e] db.e2e.json seeded (users only; notes는 Supabase)');

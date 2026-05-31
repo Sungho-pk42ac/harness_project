@@ -1,0 +1,43 @@
+# 로컬/CI 전용 Supabase 설정. 노트 백엔드(PostgREST + Postgres)만 필요하므로
+# studio/auth/storage/realtime/edge 등은 꺼서 `supabase start`를 가볍게 한다.
+# 인증은 여전히 json-server(/users)가 담당한다(다음 런에서 Supabase Auth로 이전).
+project_id = "ccwork"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[studio]
+enabled = false
+
+# auth(gotrue)를 켜야 `supabase status -o env`가 ANON_KEY를 출력한다(키를 추측하지 않고 실제 값 사용).
+# 앱 인증은 여전히 json-server(/users)를 쓰고 gotrue는 사용하지 않지만, anon 키 발급/JWT 검증을 위해 켠다.
+[auth]
+enabled = true
+
+[storage]
+enabled = false
+
+[realtime]
+enabled = false
+
+[inbucket]
+enabled = false
+
+[analytics]
+enabled = false
+
+[edge_runtime]
+enabled = false
