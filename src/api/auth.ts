@@ -1,24 +1,39 @@
+import { getSupabase } from './supabaseClient';
 import { User } from '../types/user';
 
-const API_URL = 'http://localhost:3001';
+/** Supabase 세션 user → 앱 User 매핑(비밀번호 등 제외). */
+function toUser(u: { id: string; email?: string }): User {
+  return { id: u.id, email: u.email ?? '' };
+}
 
 /**
- * 로그인 — JSON Server users 컬렉션을 이메일로 조회한 뒤 비밀번호를 대조한다 (spec-fixed §2).
- * 비밀번호 대조를 클라이언트에서 하는 이유: json-server 1.x는 숫자형 쿼리값(예: password=1234)을
- * 숫자로 강제 변환해 문자열 "1234"와 불일치시키므로 `?email=&password=` 결합 쿼리가 빈 배열을
- * 반환한다. 이메일로만 조회 후 password를 직접 비교하면 이 거동과 무관하게 검증이 동작한다.
- * @param email 이메일
- * @param password 비밀번호(평문, 실습용)
+ * 로그인 — Supabase Auth `signInWithPassword`. 실패 시 'Invalid credentials'를 throw
+ * (LoginPage가 이 메시지를 한국어 인라인 에러로 매핑하므로 문구를 유지한다).
  */
 export async function login(email: string, password: string): Promise<User> {
-  const res = await fetch(`${API_URL}/users?email=${encodeURIComponent(email)}`);
-  if (!res.ok) throw new Error('Failed to login');
-  const users: Array<{ id: string; email: string; password?: string }> = await res.json();
-  const matched = Array.isArray(users) ? users.find((u) => u.password === password) : undefined;
-  if (!matched) {
+  const { data, error } = await getSupabase().auth.signInWithPassword({ email, password });
+  if (error || !data.user) {
     throw new Error('Invalid credentials');
   }
-  // 비밀번호를 제외한 형태로 반환
-  const { id, email: userEmail } = matched;
-  return { id, email: userEmail };
+  return toUser(data.user);
+}
+
+/** 로그아웃 — Supabase 세션 종료. */
+export async function logout(): Promise<void> {
+  const { error } = await getSupabase().auth.signOut();
+  if (error) throw new Error('Failed to logout');
+}
+
+/** 현재 세션의 user(없으면 null). 앱 시작 시 세션 복원에 사용. */
+export async function getSessionUser(): Promise<User | null> {
+  const { data } = await getSupabase().auth.getSession();
+  return data.session?.user ? toUser(data.session.user) : null;
+}
+
+/** 인증 상태 변화 구독. 변경 시 user(또는 null)를 콜백. 해제 함수를 반환한다. */
+export function onAuthChange(cb: (user: User | null) => void): () => void {
+  const { data } = getSupabase().auth.onAuthStateChange((_event, session) => {
+    cb(session?.user ? toUser(session.user) : null);
+  });
+  return () => data.subscription.unsubscribe();
 }

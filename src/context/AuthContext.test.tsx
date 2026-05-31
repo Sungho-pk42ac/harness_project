@@ -1,26 +1,32 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { AuthProvider, useAuth } from './AuthContext';
+import * as api from '../api/auth';
+
+// 세션의 단일 출처는 supabase(api/auth). localStorage 대신 api 경계를 모킹한다.
+vi.mock('../api/auth');
 
 const wrapper = ({ children }: { children: ReactNode }) => <AuthProvider>{children}</AuthProvider>;
 
 describe('AuthContext', () => {
   beforeEach(() => {
-    localStorage.clear();
+    vi.clearAllMocks();
+    vi.mocked(api.onAuthChange).mockReturnValue(() => {});
   });
 
-  it('[정상] AuthContext — should localStorage의 user를 복원한다 when AuthProvider가 초기화된다', async () => {
-    // Arrange: 이전 세션이 localStorage에 있다
-    localStorage.setItem('auth.user', JSON.stringify({ id: 'u1', email: 'test@test.com' }));
+  it('[정상] AuthContext — should Supabase 세션 user를 복원한다 when 세션이 있다', async () => {
+    // Arrange: 기존 세션을 supabase가 반환
+    vi.mocked(api.getSessionUser).mockResolvedValue({ id: 'u1', email: 'test@test.com' });
     // Act
     const { result } = renderHook(() => useAuth(), { wrapper });
-    // Assert: 복원 완료 후 user가 채워진다
+    // Assert
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.user).toEqual({ id: 'u1', email: 'test@test.com' });
   });
 
-  it('[정상] AuthContext — should user를 null로 만들고 localStorage에서 제거한다 when logout을 호출한다', async () => {
-    localStorage.setItem('auth.user', JSON.stringify({ id: 'u1', email: 'test@test.com' }));
+  it('[정상] AuthContext — should signOut 호출 + user를 null로 만든다 when logout을 호출한다', async () => {
+    vi.mocked(api.getSessionUser).mockResolvedValue({ id: 'u1', email: 'test@test.com' });
+    vi.mocked(api.logout).mockResolvedValue();
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.user).not.toBeNull());
     // Act
@@ -28,7 +34,7 @@ describe('AuthContext', () => {
       result.current.logout();
     });
     // Assert
+    expect(api.logout).toHaveBeenCalled();
     expect(result.current.user).toBeNull();
-    expect(localStorage.getItem('auth.user')).toBeNull();
   });
 });
