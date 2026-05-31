@@ -9,6 +9,7 @@ import { SortControl } from './components/SortControl';
 import { SearchBar } from './components/SearchBar';
 import { LoginPage } from './components/LoginPage';
 import { NoteGraph } from './components/NoteGraph';
+import { AssistantContainer } from './components/AssistantContainer';
 import type { SortBy, SortDir } from './utils/sortNotes';
 
 // 인증 게이트 — 미로그인 시 로그인 화면, 로그인 시 노트 화면 (ADR-0003)
@@ -23,6 +24,8 @@ function AppContent() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   // 검색어 — 화면 상태(App 소유), 원본 불변 필터 (search spec-fixed §1)
   const [searchQuery, setSearchQuery] = useState('');
+  // AI 비서 패널 열림 상태 (note-assistant-agent). 화면 상태이므로 App 소유
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   const handleSelectNote = (id: string) => {
     setSelectedNoteId(id);
@@ -73,6 +76,10 @@ function AppContent() {
         view={view}
         onToggleView={handleToggleView}
         onToggleGraph={handleToggleGraph}
+        onToggleAssistant={() => setAssistantOpen((v) => !v)}
+        assistant={
+          <AssistantContainer open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+        }
         sidebar={
           view === 'trash' ? (
             <TrashList />

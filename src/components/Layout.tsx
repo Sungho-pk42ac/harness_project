@@ -13,6 +13,9 @@ interface LayoutProps {
   onToggleView: () => void;
   // 그래프 뷰 토글 (note-graph-viz NGV-2). 옵셔널 — 미주입 시 버튼 미표시
   onToggleGraph?: () => void;
+  // AI 비서 패널 슬롯·토글 (note-assistant-agent NAA-1). 옵셔널 — 미주입 시 기존 동작 불변
+  assistant?: ReactNode;
+  onToggleAssistant?: () => void;
 }
 
 export function Layout({
@@ -22,6 +25,8 @@ export function Layout({
   view,
   onToggleView,
   onToggleGraph,
+  assistant,
+  onToggleAssistant,
 }: LayoutProps) {
   const { user, logout } = useAuth();
   const { notes } = useNotes();
@@ -66,6 +71,15 @@ export function Layout({
           >
             {view === 'trash' ? '노트로 돌아가기' : '휴지통'}
           </button>
+          {/* AI 비서 토글 — 옵셔널 (note-assistant-agent NAA-1) */}
+          {onToggleAssistant && (
+            <button
+              onClick={onToggleAssistant}
+              className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              AI 비서
+            </button>
+          )}
           {/* 전체 노트 JSON 백업 — 노트 0건이면 비활성 */}
           <button
             onClick={handleBackup}
@@ -100,6 +114,9 @@ export function Layout({
         {/* 메인 */}
         <div className="flex-1 overflow-y-auto p-8">{main}</div>
       </div>
+
+      {/* AI 비서 패널 슬롯 — 우측 도크 오버레이 (옵셔널) */}
+      {assistant}
     </div>
   );
 }
