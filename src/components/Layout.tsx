@@ -36,9 +36,8 @@ export function Layout({ onNewNote, sidebar, main, view, onToggleView }: LayoutP
     <div className="min-h-screen bg-background">
       {/* 헤더 */}
       <header className="bg-card border-b border-border px-6 py-4 flex items-center justify-between shadow-sm">
-        <h1 className="text-2xl font-bold text-foreground font-['Boogaloo',_sans-serif]">
-          📝 Notes
-        </h1>
+        {/* 로고 — 라틴 워드마크는 font-display(Boogaloo), 인디고 포인트 (디자인 시스템 타이포·컬러) */}
+        <h1 className="text-3xl font-display tracking-wide text-primary">SLNOTE</h1>
         <div className="flex items-center gap-3">
           {/* 현재 사용자 이메일 */}
           {user && <span className="text-sm text-muted-foreground">{user.email}</span>}
@@ -59,7 +58,7 @@ export function Layout({ onNewNote, sidebar, main, view, onToggleView }: LayoutP
           </button>
           <button
             onClick={onNewNote}
-            className="bg-foreground text-card px-4 py-2 rounded-xl text-sm font-semibold hover:opacity-75 transition-opacity cursor-pointer"
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary-hover transition-colors cursor-pointer"
           >
             + 새 노트
           </button>

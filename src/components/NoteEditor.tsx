@@ -196,7 +196,7 @@ export function NoteEditor({ selectedNoteId, isCreating, onDone }: NoteEditorPro
         <button
           onClick={handleSave}
           disabled={saving}
-          className="bg-foreground text-card px-5 py-2 rounded-xl text-sm font-semibold hover:opacity-75 transition-opacity disabled:opacity-40 cursor-pointer"
+          className="bg-primary text-primary-foreground px-5 py-2 rounded-xl text-sm font-semibold hover:bg-primary-hover transition-colors disabled:opacity-40 cursor-pointer"
         >
           {saving ? '저장 중...' : '저장'}
         </button>
